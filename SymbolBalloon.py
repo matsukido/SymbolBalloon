@@ -19,18 +19,11 @@ class Const:
 class Pkg:
 
     settings:           ClassVar[object]
-    ignored_by_syntax:  ClassVar[dict] = {}
-    more_ignorechr:     ClassVar[str] = ""
 
     @classmethod
     def init(cls):
         cls.settings = sublime.load_settings("SymbolBalloon.sublime-settings")
         cls.settings.add_on_change(Const.KEY_ID, cls.init)
-        cls.ignored_by_syntax = cls.settings.get("ignored_by_syntax", {})
-
-    @classmethod
-    def set_syntax(cls,  syntax_name):
-        cls.more_ignorechr = cls.ignored_by_syntax.get(syntax_name, ["", ""])[0]
 
 
 class ChainMapEx(collections.ChainMap):
@@ -188,7 +181,6 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
 
         vw = self.view
         Cache.query_init(vw)
-        Pkg.set_syntax(vw.syntax().name)
 
         vpoint = vw.visible_region().begin()
         offset = Pkg.settings.get("row_offset", 0)
