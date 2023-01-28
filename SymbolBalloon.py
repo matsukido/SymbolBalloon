@@ -18,7 +18,7 @@ class Const:
 
 class Pkg:
 
-    settings:           ClassVar[object]
+    settings: ClassVar[object]
 
     @classmethod
     def init(cls):
