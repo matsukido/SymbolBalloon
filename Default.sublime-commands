@@ -1,0 +1,18 @@
+[
+	{
+		"caption": "SymbolBalloon: Raise Balloon",
+		"command": "raise_symbol_balloon"
+	},
+	{
+		"caption": "SymbolBalloon: Break Balloon",
+		"command": "break_symbol_balloon"
+	},
+	{
+		"caption": "SymbolBalloon: Clear Cache",
+		"command": "clear_cache"
+	},
+	{
+		"caption": "SymbolBalloon: README",
+		"command": "open_file","args": {"file": "${packages}/SymbolBalloon/README.md"}
+	},
+]
