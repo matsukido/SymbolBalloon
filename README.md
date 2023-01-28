@@ -6,7 +6,7 @@ ST4085+
 
 画面上部の行が属するシンボルを表示します。
 
-![repository-open-graph-template](https://user-images.githubusercontent.com/123632250/215265460-83e19577-f72c-41c9-83dc-a53f9fb4b485.png)
+![名称未設定77](https://user-images.githubusercontent.com/123632250/215292627-ef418271-aa4a-4792-b7b4-db9b680fa63a.png)
 
 
 ### Key Bindings
