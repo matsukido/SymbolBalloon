@@ -1,7 +1,9 @@
 ## SymbolBalloon
 
 plugin for Sublime Text 4
+
 ST4085+
+
 
 画面上部の行が属するシンボルを表示します。
 
