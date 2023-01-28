@@ -4,10 +4,9 @@ plugin for Sublime Text 4
 
 ST4085+
 
-![repository-open-graph-template](https://user-images.githubusercontent.com/123632250/215265460-83e19577-f72c-41c9-83dc-a53f9fb4b485.png)
-
-
 画面上部の行が属するシンボルを表示します。
+
+![repository-open-graph-template](https://user-images.githubusercontent.com/123632250/215265460-83e19577-f72c-41c9-83dc-a53f9fb4b485.png)
 
 
 ### Key Bindings
