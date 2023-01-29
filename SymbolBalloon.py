@@ -86,7 +86,8 @@ class Cache:
         }
         cls.views.move_to_child(lambda dct: dct["id"] == view.id(), init_dct)
 
-        if cls.views["change_counter"] < view.change_count():
+        if cls.views["change_counter"] < view.change_count() or \
+                                        not cls.views["symbol_regions"]:
             cls.views.maps[0] = init_dct()
 
 
