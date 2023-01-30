@@ -13,17 +13,18 @@ from typing import ClassVar
 @dcls.dataclass(init=False, eq=False, frozen=True)
 class Const:
 
-    KEY_ID: ClassVar[str] = "SymbolBalloon"
+    KEY_ID: ClassVar[str] = __package__
 
 
 class Pkg:
 
-    settings: ClassVar[object]
+    settings: ClassVar[object] = None
 
     @classmethod
-    def init(cls):
-        cls.settings = sublime.load_settings("SymbolBalloon.sublime-settings")
-        cls.settings.add_on_change(Const.KEY_ID, cls.init)
+    def init_settings(cls):
+        if cls.settings is None:
+            cls.settings = sublime.load_settings(f"{__package__}.sublime-settings")
+            cls.settings.add_on_change(Const.KEY_ID, cls.init_settings)
 
 
 class ChainMapEx(collections.ChainMap):
@@ -101,7 +102,7 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
 
 
 def plugin_loaded():
-    Pkg.init()
+    Pkg.init_settings()
 
 
 def cache_manager(scanlines):
@@ -143,7 +144,7 @@ def scan_lines(view, region, target_indentlevel, start_row=0):
     def isnot_ignored(point):
         ignr = Pkg.settings.get("ignored_characters", "") + "\n"
         return view.substr(point) not in ignr and \
-                not view.match_selector(point, Pkg.settings.get("ignored_scope", ""))
+                not view.match_selector(point, Pkg.settings.get("ignored_scope", "_"))
 
     closed = Closed()
     if start_row == 2:
@@ -182,9 +183,10 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
 
         vw = self.view
         Cache.query_init(vw)
+        Pkg.init_settings()
 
         vpoint = vw.visible_region().begin()
-        offset = Pkg.settings.get("row_offset", 0)
+        offset = Pkg.settings.get("row_offset", 1)
         vpoint = vw.text_point(vw.rowcol(vpoint)[0] + offset, 0)
 
         is_source = "Markdown" not in vw.syntax().name
