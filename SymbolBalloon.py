@@ -101,10 +101,6 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
         del Cache.views.maps[0]
 
 
-def plugin_loaded():
-    Pkg.init_settings()
-
-
 def cache_manager(scanlines):
 
     def _cache_manager_(view, region, target_indentlevel):
