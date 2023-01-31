@@ -182,7 +182,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         Pkg.init_settings()
 
         vpoint = vw.visible_region().begin()
-        offset = Pkg.settings.get("row_offset", 1)
+        offset = Pkg.settings.get("row_offset", 0)
         vpoint = vw.text_point(vw.rowcol(vpoint)[0] + offset, 0)
 
         is_source = "Markdown" not in vw.syntax().name
