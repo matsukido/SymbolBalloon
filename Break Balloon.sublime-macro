@@ -1,4 +1,4 @@
 [
-	{"command": "scroll_lines", "args": {"amount": -1.0 }},
 	{"command": "break_symbol_balloon"},
+	{"command": "scroll_lines", "args": {"amount": -1.0 }},
 ]
