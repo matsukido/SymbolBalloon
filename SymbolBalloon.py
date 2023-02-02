@@ -13,7 +13,7 @@ from typing import ClassVar
 @dcls.dataclass(init=False, eq=False, frozen=True)
 class Const:
 
-    KEY_ID: ClassVar[str] = __package__
+    KEY_ID: ClassVar[str] = "SymbolBalloon"
 
 
 class Pkg:
@@ -23,7 +23,7 @@ class Pkg:
     @classmethod
     def init_settings(cls):
         if cls.settings is None:
-            cls.settings = sublime.load_settings(f"{__package__}.sublime-settings")
+            cls.settings = sublime.load_settings("SymbolBalloon.sublime-settings")
             cls.settings.add_on_change(Const.KEY_ID, cls.init_settings)
 
 
@@ -41,7 +41,7 @@ class ChainMapEx(collections.ChainMap):
     def move_to_child(self, pred, init_factory):
         for i, dct in enumerate(self.maps):
             if pred(dct):
-                self.maps = self.maps[i:] + self.maps[:i]
+                self.maps[0], self.maps[i] = self.maps[i], self.maps[0]
                 break
         else:
             self.maps = [init_factory()] + self.maps
