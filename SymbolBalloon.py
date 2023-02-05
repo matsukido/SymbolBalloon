@@ -41,7 +41,7 @@ class ChainMapEx(collections.ChainMap):
     def move_to_child(self, pred, init_factory):
         dq = collections.deque(self.maps, 80)
         # or None
-        if not any(pred(dq[0]) or dq.rotate()  for _ in range(len(dq))): # or None
+        if not any(pred(dq[0]) or dq.rotate()  for _ in range(len(dq))):
             dq.appendleft(init_factory())
 
         self.maps = list(dq)
