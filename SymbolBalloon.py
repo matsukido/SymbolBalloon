@@ -39,12 +39,12 @@ class ChainMapEx(collections.ChainMap):
         return max((kv  for kv in self.items() if val(kv) < limit), key=val)
 
     def move_to_child(self, pred, init_factory):
-        for i, dct in enumerate(self.maps):
-            if pred(dct):
-                self.maps[0], self.maps[i] = self.maps[i], self.maps[0]
-                break
-        else:
-            self.maps = [init_factory()] + self.maps
+        dq = collections.deque(self.maps, 80)
+        # or None
+        if not any(pred(dq[0]) or dq.rotate()  for _ in range(len(dq))): # or None
+            dq.appendleft(init_factory())
+
+        self.maps = list(dq)
 
 
 @dcls.dataclass(eq=False)
