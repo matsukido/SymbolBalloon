@@ -71,6 +71,7 @@ class Closed:
 class Cache:
     # views.maps = [{init_dct}, {init_dct}, ...]  masked parents 
     views:  ClassVar[ChainMapEx] = ChainMapEx({"id": -1, "change_counter":-1})
+    busy = False
 
     @classmethod
     def query_init(cls, view):
@@ -90,6 +91,10 @@ class Cache:
         if cls.views["change_counter"] < view.change_count() or \
                                         not cls.views["symbol_regions"]:
             cls.views.maps[0] = init_dct()
+
+    @classmethod
+    def reset_busy(cls):
+        cls.busy = False
 
 
 class SymbolBalloonListner(sublime_plugin.EventListener):
@@ -178,6 +183,10 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             return self.view.extract_scope(point).b - point
 
         vw = self.view
+        if Cache.busy:
+            return
+        Cache.busy = True
+        sublime.set_timeout(Cache.reset_busy, 0.3)  # seconds
         Cache.query_init(vw)
         Pkg.init_settings()
 
