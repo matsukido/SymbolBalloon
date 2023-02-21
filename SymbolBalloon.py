@@ -39,7 +39,7 @@ class ChainMapEx(collections.ChainMap):
         return max((kv  for kv in self.items() if val(kv) < limit), key=val)
 
     def move_to_child(self, pred, init_factory):
-        dq = collections.deque(self.maps, 80)
+        dq = collections.deque(self.maps, maxlen=80)
         # or None
         if not any(pred(dq[0]) or dq.rotate()  for _ in range(len(dq))):
             dq.appendleft(init_factory())
@@ -88,7 +88,7 @@ class Cache:
         }
         cls.views.move_to_child(lambda dct: dct["id"] == view.id(), init_dct)
 
-        if cls.views["change_counter"] < view.change_count() or \
+        if cls.views["change_counter"] != view.change_count() or \
                                         not cls.views["symbol_regions"]:
             cls.views.maps[0] = init_dct()
 
@@ -186,7 +186,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         if Cache.busy:
             return
         Cache.busy = True
-        sublime.set_timeout(Cache.reset_busy, 0.3)  # seconds
+        sublime.set_timeout(Cache.reset_busy, 5)  # ms
         Cache.query_init(vw)
         Pkg.init_settings()
 
