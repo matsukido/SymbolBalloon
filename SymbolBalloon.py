@@ -71,7 +71,7 @@ class Closed:
 class Cache:
     # views.maps = [{init_dct}, {init_dct}, ...]  masked parents 
     views:  ClassVar[ChainMapEx] = ChainMapEx({"id": -1, "change_counter":-1})
-    busy = False
+    busy: ClassVar[bool] = False
 
     @classmethod
     def query_init(cls, view):
