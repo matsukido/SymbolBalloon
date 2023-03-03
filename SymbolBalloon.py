@@ -7,6 +7,8 @@ import itertools
 import collections
 import operator as opr
 import dataclasses as dcls
+import bisect
+import array
 from typing import ClassVar
 
 
@@ -33,13 +35,18 @@ class ChainMapEx(collections.ChainMap):
         self.maps.append(mapping)     # setdefault
         self.maps = [dict(self.items())]
 
-    def limit_max(self, limit):
-        # {3:10, 2:40, 1:70}.limit_max(50) --> (2, 40)
-        val = opr.itemgetter(1)
-        return max((kv  for kv in self.items() if val(kv) < limit), key=val)
+    def limit_filter(self, limit):
+        return {k: v  for k, v in self.items() if v < limit}
+
+    def fill(self, stop):
+        # {2: 45, 4: 66}.fill(6) --> {2: 45, 3: -1, 4: 66, 5: -1}
+        dct = {i: -1  for i in range(min(self, default=0), stop)}
+        cm = ChainMapEx(self)
+        cm.appendflat(dct)
+        return cm
 
     def move_to_child(self, pred, init_factory):
-        dq = collections.deque(self.maps, maxlen=80)
+        dq = collections.deque(self.maps, maxlen=50)
         # or None
         if not any(pred(dq[0]) or dq.rotate()  for _ in range(len(dq))):
             dq.appendleft(init_factory())
@@ -53,19 +60,19 @@ class Closed:
     true: ChainMapEx = dcls.field(default_factory=ChainMapEx)
     false: ChainMapEx = dcls.field(default_factory=ChainMapEx)
 
-    def append(self, closed):
+    def appendflat(self, closed):
         self.true.appendflat(closed.true)
         self.false.appendflat(closed.false)
 
-    def query(self, visible_point):
-        min_idt, _ = self.true.limit_max(visible_point)
-        idt, pt = self.false.limit_max(visible_point)
+    def cut(self, visible_point):
+        dct_t = self.true.limit_filter(visible_point)
+        dct_f = self.false.limit_filter(visible_point)
 
         ignoredpt = -1
-        if (idt < min_idt) or (idt == min_idt == 0):
-            ignoredpt = pt
+        if (idt := min(dct_f, default=99)) < min(dct_t):
+            ignoredpt = dct_f[idt]
 
-        return min_idt, ignoredpt
+        return Closed(ChainMapEx(dct_t), ChainMapEx(dct_f)), ignoredpt
 
 
 class Cache:
@@ -76,21 +83,86 @@ class Cache:
     @classmethod
     def query_init(cls, view):
 
-        def filtered(symbol_regions):
-            Symbol = collections.namedtuple("Symbol", ["name", "region"])
-            return [Symbol(sym.name, sym.region)  for sym in symbol_regions]
+        def init_dct():
 
-        init_dct = lambda: {
-            "id": view.id(),
-            "symbol_regions": filtered(view.symbol_regions()),
-            "symbol": {},       # {symbol_region_a: [scannedpt, Closed], ...}
-            "change_counter": view.change_count()
-        }
+            def heading_level(point):
+                nonlocal view
+                pt = view.line(point).begin()
+                return view.extract_scope(pt).end() - pt
+
+            nonlocal view
+            is_source = "Markdown" not in view.syntax().name
+            level = view.indentation_level if is_source else heading_level
+
+            Symbol = collections.namedtuple("Symbol", ["region", "name"])
+            syminfos = (Symbol(info.region, info.name)
+                                    for info in view.symbol_regions())
+            
+            rgn_a_pts = array.array("L")
+            scanned_pts = array.array("L")
+            sym_levels = array.array("B")
+            sym_infos = []
+            closes = []
+
+            for info in syminfos:
+                rgna = info.region.a
+                rgn_a_pts.append(rgna)
+                scanned_pts.append(rgna)
+
+                idt = level(rgna)
+                sym_levels.append(idt)
+                sym_infos.append(info)
+
+                clos =  Closed()
+                clos.true.appendflat({idt + 1: rgna})
+                closes.append(clos)
+
+            rgn_a_pts.append(view.size())
+
+            return {
+                "id": view.id(),
+                "region_a": rgn_a_pts,
+                "scanned_point": scanned_pts,
+                "symbol_level": sym_levels,
+                "symbol_info": sym_infos,
+                "closed": closes,
+                "change_counter": view.change_count()
+            }
+
         cls.views.move_to_child(lambda dct: dct["id"] == view.id(), init_dct)
 
         if cls.views["change_counter"] != view.change_count() or \
-                                        not cls.views["symbol_regions"]:
+                                        not cls.views["symbol_info"]:
             cls.views.maps[0] = init_dct()
+
+    @classmethod
+    def sectional_view(cls, visible_point):
+        idx = bisect.bisect_left(cls.views["region_a"], visible_point) - 1
+        if idx < 0:
+            return {}, -1
+
+        reverse = slice(idx, None, -1)
+        idtlvls = cls.views["symbol_level"][reverse]
+        idtlvls.append(0)
+        stopper = range(idtlvls.index(0) + 1)
+
+        sym_infos = cls.views["symbol_info"][reverse]
+        closes = cls.views["closed"][reverse]
+        if not closes:
+            return {}, -1
+
+        sym_dct = ({idt: info}  for idt, info, _ in zip(idtlvls, sym_infos, stopper))
+
+        section, ignoredpt = closes[0].cut(visible_point)
+        closes[0] = section
+        shutter = (cl.true.fill(12)  for cl in closes)
+
+        hiding = itertools.chain.from_iterable(zip(shutter, sym_dct))
+
+        visible_idtlvl = dict(ChainMapEx(*hiding))
+        visible_symbol = {idt: info  for idt, info in visible_idtlvl.items()
+                                                if not isinstance(info, int)}
+        return visible_symbol, ignoredpt
 
     @classmethod
     def reset_busy(cls):
@@ -106,56 +178,53 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
         del Cache.views.maps[0]
 
 
-def cache_manager(scanlines):
+def scan_manager(scanlines):
 
-    def _cache_manager_(view, region, target_indentlevel):
+    def _scan_manager_(view, region):
 
         rgn_a, visible_pt = region.to_tuple()
+        region_a_pts = Cache.views["region_a"]
 
-        symbol_region_a = Cache.views["symbol"].get(rgn_a, [-1, -1])
+        idx = region_a_pts.index(rgn_a)
+        rgnas = itertools.takewhile(lambda pt: pt < visible_pt, 
+                                                region_a_pts[idx:])
+        for rgna in rgnas:
+            scpt = Cache.views["scanned_point"][idx]
+            delta_rgn = sublime.Region(scpt, region_a_pts[idx + 1])
+            start_row = 2 if rgna == scpt else 0
+            target_indentlevel = Cache.views["symbol_level"][idx] + 1
 
-        if symbol_region_a[0] == -1:    # scannedpt == -1
+            new_scannedpt, closed = scanlines(view, 
+                                              delta_rgn,
+                                              target_indentlevel,
+                                              start_row)
 
-            scannedpt, closed = scanlines(view, region, target_indentlevel, 2)
-            Cache.views["symbol"][rgn_a] = [scannedpt, closed]
+            Cache.views["scanned_point"][idx] = new_scannedpt
+            Cache.views["closed"][idx].appendflat(closed)
+            idx += 1
 
-        else:
-            scannedpt = symbol_region_a[0]
-
-            if scannedpt < visible_pt:
-                delta_rgn = sublime.Region(scannedpt, visible_pt)
-                new_scannedpt, closed = scanlines(view,
-                                                    delta_rgn,
-                                                    target_indentlevel)
-                Cache.views["symbol"][rgn_a][0] = new_scannedpt
-                Cache.views["symbol"][rgn_a][1].append(closed)
-
-        return dcls.replace(Cache.views["symbol"][rgn_a][1])  # copied Closed
-
-    return _cache_manager_
+    return _scan_manager_
 
 
-@cache_manager
+@scan_manager
 def scan_lines(view, region, target_indentlevel, start_row=0):
 
     def indentendpoint(indentlevel, point: 'Linestart point'):
+        nonlocal view
         # 1 | 4 | 128   WORD_START | PUNCTUATION_START | LINE_END 
         return view.find_by_class(point, True, 133) if indentlevel else point
 
     def isnot_ignored(point):
+        nonlocal view
         ignr = Pkg.settings.get("ignored_characters", "") + "\n"
         return view.substr(point) not in ignr and \
                 not view.match_selector(point, Pkg.settings.get("ignored_scope", "_"))
 
     closed = Closed()
-    if start_row == 2:
-        closed.true.update({target_indentlevel: region.a})
-        closed.false.update({target_indentlevel: -1})
-
     linestart_pts = (lrgn.a  for lrgn in view.lines(region)
-                        [start_row:Pkg.settings.get("max_scan_lines", 3000)]
+                        [start_row:Pkg.settings.get("max_scan_lines", 2000)]
                                             if not lrgn.empty())
-    pt = -1
+    pt = region.a
     for pt in linestart_pts:
         if (idt := view.indentation_level(pt)) < target_indentlevel:
             if isnot_ignored(indentendpoint(idt, pt)):
@@ -178,15 +247,13 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
 
         def annotation_navigate(href):
             self.view.erase_regions(Const.KEY_ID)
-
-        def heading_level(point: "Linestart point"):
-            return self.view.extract_scope(point).b - point
-
+        stt = time.perf_counter_ns()
         vw = self.view
         if Cache.busy:
             return
         Cache.busy = True
-        sublime.set_timeout(Cache.reset_busy, 5)  # ms
+
+        sublime.set_timeout(Cache.reset_busy, 5)
         Cache.query_init(vw)
         Pkg.init_settings()
 
@@ -195,30 +262,25 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         vpoint = vw.text_point(vw.rowcol(vpoint)[0] + offset, 0)
 
         is_source = "Markdown" not in vw.syntax().name
-        level = vw.indentation_level if is_source else heading_level
         rgn_a = opr.attrgetter("region.a")
 
-        symbol_infos = itertools.takewhile(lambda sym: rgn_a(sym) < vpoint,
-                                                Cache.views["symbol_regions"])
-        symbol_dct = {(lastlvl := level(rgn_a(sym))): sym
-                                        for sym in symbol_infos}
-        if not symbol_dct:
+        # {indentation_level: Symbol, ...}
+        visible_symbol, _ = Cache.sectional_view(vpoint + 1)
+        if not visible_symbol:
             return
 
+        most_far = min(map(rgn_a, visible_symbol.values())) 
         if is_source:
-            rgn = sublime.Region(rgn_a(symbol_dct[lastlvl]), vpoint + 1)
-            closed = scan_lines(vw, rgn, target_indentlevel=lastlvl + 1)
-            threshold, ignoredpt = closed.query(vpoint + 1)
+            scan_lines(vw, sublime.Region(most_far, vpoint + 1))
+            visible_symbol, ignoredpt = Cache.sectional_view(vpoint + 1)
 
         else:
-            is_heading = vw.match_selector(vpoint, "markup.heading")
-            target_idt = level(vpoint) if is_heading else 99
-            threshold, ignoredpt = min(lastlvl + 1, target_idt), -1
+            ignoredpt = -1
 
-        symbol_infos = [sym  for idt, sym in symbol_dct.items() if idt < threshold]
+        symbol_infos = [*visible_symbol.values()]
         if not symbol_infos:
             return
-
+        
         vw.run_command("break_symbol_balloon")
         symbol_infos.sort(key=rgn_a)
         markup = ""
