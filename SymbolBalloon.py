@@ -247,7 +247,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
 
         def annotation_navigate(href):
             self.view.erase_regions(Const.KEY_ID)
-        stt = time.perf_counter_ns()
+
         vw = self.view
         if Cache.busy:
             return
