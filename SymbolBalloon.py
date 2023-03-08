@@ -39,8 +39,8 @@ class ChainMapEx(collections.ChainMap):
         return {k: v  for k, v in self.items() if v < limit}
 
     def fill(self, stop):
-        # {2: 45, 4: 66}.fill(6) --> {2: 45, 3: -1, 4: 66, 5: -1}
-        dct = {i: -1  for i in range(min(self, default=0), stop)}
+        # {3: 44, 1: 77}.fill(6) --> {2: -1, 3: 44, 4: -1, 5: -1, 1: 77}
+        dct = {i: -1  for i in range(min(self, default=99) + 1, stop)}
         cm = ChainMapEx(self)
         cm.appendflat(dct)
         return cm
@@ -265,13 +265,14 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         rgn_a = opr.attrgetter("region.a")
 
         # {indentation_level: Symbol, ...}
-        visible_symbol, _ = Cache.sectional_view(vpoint + 1)
-        if not visible_symbol:
+        a_pts = itertools.takewhile(lambda pt: pt < vpoint, Cache.views["region_a"])
+        nearly_symbol = dict(zip(Cache.views["symbol_level"], a_pts))
+        if not nearly_symbol:
             return
 
-        most_far = min(map(rgn_a, visible_symbol.values())) 
+        min_level_pt = nearly_symbol[min(nearly_symbol)]
         if is_source:
-            scan_lines(vw, sublime.Region(most_far, vpoint + 1))
+            scan_lines(vw, sublime.Region(min_level_pt, vpoint + 1))
             visible_symbol, ignoredpt = Cache.sectional_view(vpoint + 1)
 
         else:
