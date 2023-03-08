@@ -264,7 +264,6 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         is_source = "Markdown" not in vw.syntax().name
         rgn_a = opr.attrgetter("region.a")
 
-        # {indentation_level: Symbol, ...}
         a_pts = itertools.takewhile(lambda pt: pt < vpoint, Cache.views["region_a"])
         nearly_symbol = dict(zip(Cache.views["symbol_level"], a_pts))
         if not nearly_symbol:
