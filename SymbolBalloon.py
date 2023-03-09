@@ -275,6 +275,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             visible_symbol, ignoredpt = Cache.sectional_view(vpoint + 1)
 
         else:
+            visible_symbol, _ = Cache.sectional_view(vpoint + 1)
             ignoredpt = -1
 
         symbol_infos = [*visible_symbol.values()]
