@@ -253,7 +253,7 @@ class ClearCacheCommand(sublime_plugin.TextCommand):
         Cache.views = ChainMapEx({"id": -1, "change_counter":-1})
         
 
-class FoldToOutline(sublime_plugin.TextCommand):
+class FoldToOutlineCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         vw = self.view
