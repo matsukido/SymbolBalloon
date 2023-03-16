@@ -4,7 +4,7 @@ Sublime Text 4085+
 
 画面上部の行が属するシンボルを表示します。
 
-![名称未設定77](https://user-images.githubusercontent.com/123632250/215292627-ef418271-aa4a-4792-b7b4-db9b680fa63a.png)
+![キャプeeeチャ](https://user-images.githubusercontent.com/123632250/225626963-f59b87a5-3fd4-4a3d-a47b-50211db2f0da.PNG)
 
 
 ### Key Bindings
