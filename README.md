@@ -4,7 +4,8 @@ Sublime Text 4085+
 
 画面上部の行が属するシンボルを表示します。
 
-![キャプeeeチャ](https://user-images.githubusercontent.com/123632250/219851274-5efc0fff-bbc1-4613-a0aa-888e697b444f.PNG)
+![名称未設定77](https://user-images.githubusercontent.com/123632250/215292627-ef418271-aa4a-4792-b7b4-db9b680fa63a.png)
+
 
 ### Key Bindings
 
@@ -12,6 +13,10 @@ Sublime Text 4085+
 [
 	{ "keys": ["ctrl+up"], "command": "run_macro_file", "args": {"file": "res://Packages/SymbolBalloon/Raise Balloon.sublime-macro"} },
 	{ "keys": ["ctrl+down"], "command": "run_macro_file", "args": {"file": "res://Packages/SymbolBalloon/Break Balloon.sublime-macro"} },
+
+	// optional
+	// { "keys": ["ctrl+j", "ctrl+r"], "command": "goto_top_level_symbol" },
+	// { "keys": ["ctrl+j", "ctrl+f"], "command": "fold_to_outline" },
 ]
 ```
 
