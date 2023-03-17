@@ -256,22 +256,23 @@ class ClearCacheCommand(sublime_plugin.TextCommand):
 class FoldToOutlineCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
+
         vw = self.view
         Cache.query_init(vw)
+        rgn_a = Cache.views["region_a"]
 
-        ab = map(opr.methodcaller("to_tuple"), 
-                 map(vw.line, Cache.views["region_a"]))
+        ab = map(opr.methodcaller("to_tuple"), map(vw.line, rgn_a[:-1]))
         flat = itertools.chain.from_iterable((a - 1, b)  for a, b in ab)
         a_pt = next(flat)
 
-        ba_rgns = itertools.starmap(sublime.Region, zip(*[flat]*2))
+        bababb = itertools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
+        ba_rgns = itertools.starmap(sublime.Region, bababb)
         vw.fold(list(ba_rgns))
 
         self.view.show(a_pt + 1,
                 show_surrounds= False,
                 animate=        True,
-                keep_to_left=   True
-        )
+                keep_to_left=   True)
 
 
 class GotoTopLevelSymbolCommand(sublime_plugin.TextCommand):
@@ -292,10 +293,9 @@ class GotoTopLevelSymbolCommand(sublime_plugin.TextCommand):
             self.view.show(symrgn.a,
                     show_surrounds= True,
                     animate=        True,
-                    keep_to_left=   True
-            )
+                    keep_to_left=   True)
 
-        def commit_symbol(symrgns, idx, event):
+        def commit_symbol(symrgns, idx):
             nonlocal vw
             vw.erase_regions("GotoTopLevelSymbol")
             if idx < 0:
@@ -326,7 +326,6 @@ class GotoTopLevelSymbolCommand(sublime_plugin.TextCommand):
         vw.window().show_quick_panel(
                 items=qpitems, 
                 on_highlight=lambda idx: focus_symbol(symrgns[idx], qpitems[idx].trigger),
-                on_select=lambda idx, evt: commit_symbol(symrgns, idx, evt),
-                flags=sublime.WANT_EVENT,
+                on_select=lambda idx: commit_symbol(symrgns, idx),
                 selected_index=index,
                 placeholder="Top level")
