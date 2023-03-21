@@ -17,8 +17,8 @@ class FoldToOutlineCommand(sublime_plugin.TextCommand):
 
         ab = map(opr.methodcaller("to_tuple"), map(vw.line, rgn_a[:-1]))
         flat = itertools.chain.from_iterable((a - 1, b)  for a, b in ab)
-        a_pt = next(flat, -99)
-        if a_pt == -99:
+        a_pt = next(flat, None)
+        if a_pt is None:
             return
 
         bababb = itertools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
