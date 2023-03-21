@@ -1,0 +1,9 @@
+{
+	"max_scan_lines": 2000,
+	"row_offset": 1,
+	"show_ignored_indentation": true,
+	"ignored_characters": "{[<()\"'/*#",
+	"ignored_scope": "comment",
+	"symbol_color": "foreground",
+	"popup_mode": false,
+}

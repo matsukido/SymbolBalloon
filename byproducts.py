@@ -17,7 +17,9 @@ class FoldToOutlineCommand(sublime_plugin.TextCommand):
 
         ab = map(opr.methodcaller("to_tuple"), map(vw.line, rgn_a[:-1]))
         flat = itertools.chain.from_iterable((a - 1, b)  for a, b in ab)
-        a_pt = next(flat)
+        a_pt = next(flat, -99)
+        if a_pt == -99:
+            return
 
         bababb = itertools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
         ba_rgns = itertools.starmap(sublime.Region, bababb)
@@ -60,9 +62,12 @@ class GotoTopLevelSymbolCommand(sublime_plugin.TextCommand):
 
         vw = self.view
         Cache.query_init(vw)
+        symlvl = Cache.views["symbol_level"]
+        if not symlvl:
+            return
 
-        toplvl = min(Cache.views["symbol_level"])
-        lvl_info = zip(Cache.views["symbol_level"], Cache.views["symbol_info"])
+        toplvl = min(symlvl)
+        lvl_info = zip(symlvl, Cache.views["symbol_info"])
         infos = (info  for lvl, info in lvl_info if lvl == toplvl)
 
         ref_begin = vw.sel()[0].begin()

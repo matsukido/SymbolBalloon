@@ -8,12 +8,13 @@ import operator as opr
 import time
 
 from .containers import Const, Pkg, ChainMapEx, Closed, Cache
+from .byproducts import *
 
 
 class SymbolBalloonListner(sublime_plugin.EventListener):
 
     def on_activated_async(self, view):
-        if view.element() == None:
+        if view.element() is None:
             Cache.query_init(view)
 
     def on_pre_close(self, view):

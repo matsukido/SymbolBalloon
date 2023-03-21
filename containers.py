@@ -21,7 +21,7 @@ class Pkg:
     @classmethod
     def init_settings(cls):
         if cls.settings is None:
-            cls.settings = sublime.load_settings("SymbolBalloon.sublime-settings")
+            cls.settings = sublime.load_settings("symbol_balloon.sublime-settings")
             cls.settings.add_on_change(Const.KEY_ID, cls.init_settings)
 
 
