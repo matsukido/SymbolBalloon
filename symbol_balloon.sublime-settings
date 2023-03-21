@@ -5,5 +5,6 @@
 	"ignored_characters": "{[<()\"'/*#",
 	"ignored_scope": "comment",
 	"symbol_color": "foreground",
+	"font_size": 0.95,
 	"popup_mode": false,
 }

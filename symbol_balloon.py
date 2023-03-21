@@ -171,8 +171,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                         '</a><br>')
 
         symcolor = Pkg.settings.get("symbol_color", "foreground")
+        fontsize = Pkg.settings.get("font_size", 0.95)
 
-        con = (f'<body id="symbolballoon">{_stylesheet(symcolor)}'
+        con = (f'<body id="symbolballoon">{_stylesheet(symcolor, fontsize)}'
                     '<div class="arrow"></div>'
                 f'<div class="balloon">{markup}</div></body>')
 
@@ -202,15 +203,15 @@ def _annotation_html():
             '　ignored indentation</body>')
 
 
-def _stylesheet(symbol_color):
+def _stylesheet(symbol_color, font_size):
     return f'''
         <style>
             .noline{{
                 text-decoration: none;
-                font-size: 0.95rem;
+                font-size: {font_size}rem;
             }}
             .symbol{{
-                color: color(var(--{symbol_color}) a(1.0));
+                color: color({symbol_color} a(1.0));
             }}
             .symbolline{{
                 color: color(var(--foreground) a(0.7));
@@ -230,7 +231,7 @@ def _stylesheet(symbol_color):
                     display: block;
                     text-decoration: none;
                     background-color: color(#dcf blend(var(--background) 18%));
-                    padding: 0.1rem 1.2rem 0.1rem 0.4rem;
+                    padding: 0.1rem 1.2rem 0.1rem 0.3rem;
                     border-radius: 0 0.3rem 0.3rem 0.2rem;
                 }}
             }}
