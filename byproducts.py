@@ -20,12 +20,12 @@ class FoldToOutlineCommand(sublime_plugin.TextCommand):
         a_pt = next(flat, None)
         if a_pt is None:
             return
-
+        # fillvalue=view.size()
         bababb = itertools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
         ba_rgns = itertools.starmap(sublime.Region, bababb)
         vw.fold(list(ba_rgns))
 
-        self.view.show(a_pt + 1,
+        vw.show(a_pt + 1,
                 show_surrounds= False,
                 animate=        True,
                 keep_to_left=   True)
@@ -45,8 +45,8 @@ class GotoTopLevelSymbolCommand(sublime_plugin.TextCommand):
                            annotations=[word],
                            annotation_color="#0a0")
 
-            self.view.show_at_center(symrgn)
-            self.view.show(symrgn.a,
+            vw.show_at_center(symrgn)
+            vw.show(symrgn.a,
                     show_surrounds= True,
                     animate=        True,
                     keep_to_left=   True)

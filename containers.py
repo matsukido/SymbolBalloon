@@ -73,7 +73,7 @@ class Closed:
 
 class Cache:
     # views.maps = [{init_dct}, {init_dct}, ...]  masked parents 
-    views:  ClassVar[ChainMapEx] = ChainMapEx({"id": -1, "change_counter":-1})
+    views:  ClassVar[ChainMapEx] = ChainMapEx({"id": -1, "change_counter": -1})
     busy: ClassVar[bool] = False
 
     @classmethod

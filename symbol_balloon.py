@@ -83,13 +83,15 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         
         def navigate(href):
-            self.view.show(int(href),
-                            show_surrounds=False,
-                            animate=True,
-                            keep_to_left=True)
+            nonlocal vw
+            vw.show(int(href),
+                    show_surrounds=False,
+                    animate=True,
+                    keep_to_left=True)
 
         def annotation_navigate(href):
-            self.view.erase_regions(Const.KEY_ID)
+            nonlocal vw
+            vw.erase_regions(Const.KEY_ID)
 
         vw = self.view
         if Cache.busy:
@@ -170,7 +172,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                             f'<span class="row">&nbsp;..{row}</span>'
                         '</a><br>')
 
-        symcolor = Pkg.settings.get("symbol_color", "foreground")
+        symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
         fontsize = Pkg.settings.get("font_size", 0.95)
 
         con = (f'<body id="symbolballoon">{_stylesheet(symcolor, fontsize)}'
@@ -252,4 +254,4 @@ class BreakSymbolBalloonCommand(sublime_plugin.TextCommand):
 class ClearCacheCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
-        Cache.views = ChainMapEx({"id": -1, "change_counter":-1})
+        Cache.views = ChainMapEx({"id": -1, "change_counter": -1})
