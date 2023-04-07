@@ -99,6 +99,7 @@ class Cache:
             sym_levels = array.array("B")
             sym_infos = []
             closes = []
+            using_tab = False
 
             for info in syminfos:
                 rgna = info.region.a
@@ -106,10 +107,13 @@ class Cache:
                 scanned_pts.append(rgna)
 
                 idt = level(rgna)
+                if 0 < idt:
+                    if view.substr(view.line(rgna))[0] == "\t":
+                        using_tab = True 
                 sym_levels.append(idt)
                 sym_infos.append(info)
 
-                clos =  Closed()
+                clos = Closed()
                 clos.true.appendflat({idt + 1: rgna})
                 closes.append(clos)
 
@@ -122,7 +126,8 @@ class Cache:
                 "symbol_level": sym_levels,
                 "symbol_info": sym_infos,
                 "closed": closes,
-                "change_counter": view.change_count()
+                "change_counter": view.change_count(),
+                "using_tab": using_tab
             }
 
         cls.views.move_to_child(lambda dct: dct["id"] == view.id(), init_dct)

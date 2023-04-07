@@ -6,6 +6,7 @@ import re
 import itertools
 import operator as opr
 import time
+import math
 
 from .containers import Const, Pkg, ChainMapEx, Closed, Cache
 from .byproducts import *
@@ -33,9 +34,9 @@ def scan_manager(scanlines):
                                                 region_a_pts[idx:])
         for rgna in rgnas:
             scpt = Cache.views["scanned_point"][idx]
-            delta_rgn = sublime.Region(scpt, region_a_pts[idx + 1])
+            delta_rgn = sublime.Region(scpt, min(region_a_pts[idx + 1], visible_pt))
             start_row = 2 if rgna == scpt else 0
-            target_indentlevel = Cache.views["symbol_level"][idx] + 1
+            target_indentlevel = Cache.views["symbol_level"][idx] + 0
 
             new_scannedpt, closed = scanlines(view, 
                                               delta_rgn,
@@ -52,28 +53,39 @@ def scan_manager(scanlines):
 @scan_manager
 def scan_lines(view, region, target_indentlevel, start_row=0):
 
-    def indentendpoint(indentlevel, point: 'Linestart point'):
-        nonlocal view
-        # 1 | 4 | 128   WORD_START | PUNCTUATION_START | LINE_END 
-        return view.find_by_class(point, True, 133) if indentlevel else point
+    ignrchr = Pkg.settings.get("ignored_characters", "") + "\n"
+    ignrscope = Pkg.settings.get("ignored_scope", "_")
+    max_lines = Pkg.settings.get("max_scan_lines", 2000)
+    tabsize = int(view.settings().get('tab_size', 8))
+    if Cache.views["using_tab"]:
+        tabsize = 1
 
-    def isnot_ignored(point):
-        nonlocal view
-        ignr = Pkg.settings.get("ignored_characters", "") + "\n"
-        return view.substr(point) not in ignr and \
-                not view.match_selector(point, Pkg.settings.get("ignored_scope", "_"))
+    tgtlvl = target_indentlevel
+    lrgns = iter(view.lines(region)[start_row:max_lines])
+    linergns = [rgn  for rgn in lrgns if not rgn.empty()]
 
-    closed = Closed()
-    linestart_pts = (lrgn.a  for lrgn in view.lines(region)
-                        [start_row:Pkg.settings.get("max_scan_lines", 2000)]
-                                            if not lrgn.empty())
+    zipped = ((rgn.a, view.substr(rgn))  for rgn in linergns)
     pt = region.a
-    for pt in linestart_pts:
-        if (idt := view.indentation_level(pt)) < target_indentlevel:
-            if isnot_ignored(indentendpoint(idt, pt)):
-                closed.true.setdefault(idt, pt)
-            else:
-                closed.false.setdefault(idt, pt)
+    closed = Closed()
+
+    for line_a, linestr in zipped:
+        pt = line_a
+        stripped = linestr.lstrip()
+        if stripped == "":
+            continue
+
+        idtwidth = linestr.index(stripped[0])
+        idtlvl = math.ceil(idtwidth / tabsize)
+        if tgtlvl < idtlvl:
+            continue
+
+        if stripped[0] in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
+            closed.false.setdefault(idtlvl, pt)
+        else:
+            closed.true.setdefault(idtlvl, pt)
+            tgtlvl = idtlvl - 1
+            if tgtlvl < 0:
+                break
 
     return pt, closed
 
