@@ -1,5 +1,5 @@
 {
-	"max_scan_lines": 2000,
+	"max_scan_lines": 10000,
 	"row_offset": 1,
 	"show_ignored_indentation": true,
 	"ignored_characters": "{[<()\"'/*#",

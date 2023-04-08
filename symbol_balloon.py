@@ -26,6 +26,9 @@ def scan_manager(scanlines):
 
     def _scan_manager_(view, region):
 
+        max_lines = Pkg.settings.get("max_scan_lines", 10000)
+        counter = iter(range(max_lines))
+
         rgn_a, visible_pt = region.to_tuple()
         region_a_pts = Cache.views["region_a"]
 
@@ -41,6 +44,7 @@ def scan_manager(scanlines):
             new_scannedpt, closed = scanlines(view, 
                                               delta_rgn,
                                               target_indentlevel,
+                                              counter,
                                               start_row)
 
             Cache.views["scanned_point"][idx] = new_scannedpt
@@ -51,35 +55,42 @@ def scan_manager(scanlines):
 
 
 @scan_manager
-def scan_lines(view, region, target_indentlevel, start_row=0):
+def scan_lines(view, region, target_indentlevel, counter, start_row=0):
 
     ignrchr = Pkg.settings.get("ignored_characters", "") + "\n"
     ignrscope = Pkg.settings.get("ignored_scope", "_")
-    max_lines = Pkg.settings.get("max_scan_lines", 2000)
     tabsize = int(view.settings().get('tab_size', 8))
     if Cache.views["using_tab"]:
         tabsize = 1
 
     tgtlvl = target_indentlevel
-    lrgns = iter(view.lines(region)[start_row:max_lines])
+    lrgns = iter(view.lines(region)[start_row:])
     linergns = [rgn  for rgn in lrgns if not rgn.empty()]
 
-    zipped = ((rgn.a, view.substr(rgn))  for rgn in linergns)
+    zipped = ((rgn.a, view.substr(rgn))  for rgn, _ in zip(linergns, counter))
     pt = region.a
     closed = Closed()
 
     for line_a, linestr in zipped:
         pt = line_a
-        stripped = linestr.lstrip()
-        if stripped == "":
-            continue
 
-        idtwidth = linestr.index(stripped[0])
-        idtlvl = math.ceil(idtwidth / tabsize)
-        if tgtlvl < idtlvl:
-            continue
+        if tgtlvl == 0:
+            topchr = linestr[0:1]
+            if topchr.isspace():
+                continue
+            idtwidth = idtlvl = 0
 
-        if stripped[0] in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
+        else:
+            topchr = linestr.lstrip()[0:1]
+            if topchr == "":
+                continue
+
+            idtwidth = linestr.index(topchr)
+            idtlvl = math.ceil(idtwidth / tabsize)
+            if tgtlvl < idtlvl:
+                continue
+
+        if topchr in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
             closed.false.setdefault(idtlvl, pt)
         else:
             closed.true.setdefault(idtlvl, pt)
@@ -104,7 +115,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         def annotation_navigate(href):
             nonlocal vw
             vw.erase_regions(Const.KEY_ID)
-
+        stt = time.perf_counter_ns()
         vw = self.view
         if Cache.busy:
             return
@@ -210,7 +221,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                            annotations=[_annotation_html()],
                            annotation_color="#aa0",
                            on_navigate=annotation_navigate)
-
+        print(time.perf_counter_ns()-stt)
 
 def _annotation_html():
     return ('<body><a style="text-decoration: none" href="">x</a>'
