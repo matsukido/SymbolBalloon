@@ -24,30 +24,37 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
 
 def scan_manager(scanlines):
 
-    def _scan_manager_(view, region):
+    def _scan_manager_(view, start_point, end_point):
 
         max_lines = Pkg.settings.get("max_scan_lines", 10000)
-        counter = iter(range(max_lines))
+        stopper = iter(range(max_lines))
 
-        rgn_a, visible_pt = region.to_tuple()
-        region_a_pts = Cache.views["region_a"]
+        sym_pts = Cache.views["region_a"]
+        idx = sym_pts.index(start_point)
+        rgnas = itertools.takewhile(lambda pt: pt < end_point, sym_pts[idx:])
+        
+        zipped = zip(Cache.views["scanned_point"][idx:], 
+                     Cache.views["region_a"][idx + 1:],
+                     rgnas,
+                     Cache.views["symbol_level"][idx:])
 
-        idx = region_a_pts.index(rgn_a)
-        rgnas = itertools.takewhile(lambda pt: pt < visible_pt, 
-                                                region_a_pts[idx:])
-        for rgna in rgnas:
+        for scanpt, nextsym, sympt, symlvl in zipped:
+
             scpt = Cache.views["scanned_point"][idx]
-            delta_rgn = sublime.Region(scpt, min(region_a_pts[idx + 1], visible_pt))
-            start_row = 2 if rgna == scpt else 0
-            target_indentlevel = Cache.views["symbol_level"][idx] + 0
+            delta_rgn = sublime.Region(scanpt, min(nextsym, end_point))
+            start_row = 2 if sympt == scanpt else 0
+
+            lrgns = zip(view.lines(delta_rgn)[start_row:], stopper)
+            linergns = [tpl[0]  for tpl in lrgns if not tpl[0].empty()]
 
             new_scannedpt, closed = scanlines(view, 
-                                              delta_rgn,
-                                              target_indentlevel,
-                                              counter,
+                                              linergns,
+                                              symlvl,
                                               start_row)
 
-            Cache.views["scanned_point"][idx] = new_scannedpt
+            if new_scannedpt != -1:
+                Cache.views["scanned_point"][idx] = new_scannedpt
+
             Cache.views["closed"][idx].appendflat(closed)
             idx += 1
 
@@ -55,7 +62,7 @@ def scan_manager(scanlines):
 
 
 @scan_manager
-def scan_lines(view, region, target_indentlevel, counter, start_row=0):
+def scan_lines(view, line_regions, target_indentlevel, start_row=0):
 
     ignrchr = Pkg.settings.get("ignored_characters", "") + "\n"
     ignrscope = Pkg.settings.get("ignored_scope", "_")
@@ -63,12 +70,9 @@ def scan_lines(view, region, target_indentlevel, counter, start_row=0):
     if Cache.views["using_tab"]:
         tabsize = 1
 
+    zipped = ((rgn.a, view.substr(rgn))  for rgn in line_regions)
     tgtlvl = target_indentlevel
-    lrgns = iter(view.lines(region)[start_row:])
-    linergns = [rgn  for rgn in lrgns if not rgn.empty()]
-
-    zipped = ((rgn.a, view.substr(rgn))  for rgn, _ in zip(linergns, counter))
-    pt = region.a
+    pt = -1
     closed = Closed()
 
     for line_a, linestr in zipped:
@@ -138,7 +142,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         is_source = "Markdown" not in vw.syntax().name
 
         if is_source:
-            scan_lines(vw, sublime.Region(top_level_pt, vpoint + 1))
+            scan_lines(vw, top_level_pt, vpoint + 1)
             visible_symbol, ignoredpt = Cache.sectional_view(vpoint + 1)
 
         else:

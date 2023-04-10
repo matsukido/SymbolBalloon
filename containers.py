@@ -144,21 +144,21 @@ class Cache:
 
         reverse = slice(idx, None, -1)
         idtlvls = cls.views["symbol_level"][reverse]
-        idtlvls.append(0)
-        stopper = range(idtlvls.index(0) + 1)
+        toplvl = min(idtlvls)
+        stopper = range(idtlvls.index(toplvl) + 1)
 
         sym_infos = cls.views["symbol_info"][reverse]
         closes = cls.views["closed"][reverse]
         if not closes:
             return {}, -1
 
-        sym_dct = ({idt: info}  for idt, info, _ in zip(idtlvls, sym_infos, stopper))
+        sym_dcts = ({idt: info}  for idt, info, _ in zip(idtlvls, sym_infos, stopper))
 
         section, ignoredpt = closes[0].cut(visible_point)
         closes[0] = section
-        shutter = (cl.true.fill(12)  for cl in closes)
+        shutter = (cl.true.fill(15)  for cl in closes)
 
-        hiding = itertools.chain.from_iterable(zip(shutter, sym_dct))
+        hiding = itertools.chain.from_iterable(zip(shutter, sym_dcts))
 
         visible_idtlvl = dict(ChainMapEx(*hiding))
         visible_symbol = {idt: info  for idt, info in visible_idtlvl.items()
