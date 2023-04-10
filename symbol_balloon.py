@@ -31,16 +31,15 @@ def scan_manager(scanlines):
 
         sym_pts = Cache.views["region_a"]
         idx = sym_pts.index(start_point)
-        rgnas = itertools.takewhile(lambda pt: pt < end_point, sym_pts[idx:])
+        sympts = itertools.takewhile(lambda pt: pt < end_point, sym_pts[idx:])
         
         zipped = zip(Cache.views["scanned_point"][idx:], 
                      Cache.views["region_a"][idx + 1:],
-                     rgnas,
+                     sympts,
                      Cache.views["symbol_level"][idx:])
 
         for scanpt, nextsym, sympt, symlvl in zipped:
 
-            scpt = Cache.views["scanned_point"][idx]
             delta_rgn = sublime.Region(scanpt, min(nextsym, end_point))
             start_row = 2 if sympt == scanpt else 0
 
@@ -70,12 +69,12 @@ def scan_lines(view, line_regions, target_indentlevel, start_row=0):
     if Cache.views["using_tab"]:
         tabsize = 1
 
-    zipped = ((rgn.a, view.substr(rgn))  for rgn in line_regions)
+    tpls = ((rgn.a, view.substr(rgn))  for rgn in line_regions)
     tgtlvl = target_indentlevel
     pt = -1
     closed = Closed()
 
-    for line_a, linestr in zipped:
+    for line_a, linestr in tpls:
         pt = line_a
 
         if tgtlvl == 0:
