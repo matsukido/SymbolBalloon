@@ -118,7 +118,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         def annotation_navigate(href):
             nonlocal vw
             vw.erase_regions(Const.KEY_ID)
-        stt=time.perf_counter_ns()
+
         vw = self.view
         if Cache.busy:
             return
@@ -224,7 +224,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                            annotations=[_annotation_html()],
                            annotation_color="#aa0",
                            on_navigate=annotation_navigate)
-        print(time.perf_counter_ns()-stt)
+
 
 def _annotation_html():
     return ('<body><a style="text-decoration: none" href="">x</a>'

@@ -1,7 +1,7 @@
 import sublime
 import sublime_plugin
 
-import itertools
+import itertools as itools
 import operator as opr
 
 from .containers import Cache
@@ -13,16 +13,16 @@ class FoldToOutlineCommand(sublime_plugin.TextCommand):
 
         vw = self.view
         Cache.query_init(vw)
-        rgn_a = Cache.views["region_a"]
+        rgn_a = Cache.views["symbol_point"]
 
         ab = map(opr.methodcaller("to_tuple"), map(vw.line, rgn_a[:-1]))
-        flat = itertools.chain.from_iterable((a - 1, b)  for a, b in ab)
+        flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
         a_pt = next(flat, None)
         if a_pt is None:
             return
         # fillvalue=view.size()
-        bababb = itertools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
-        ba_rgns = itertools.starmap(sublime.Region, bababb)
+        bababb = itools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
+        ba_rgns = itools.starmap(sublime.Region, bababb)
         vw.fold(list(ba_rgns))
 
         vw.show(a_pt + 1,
