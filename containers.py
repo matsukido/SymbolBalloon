@@ -42,7 +42,7 @@ class ChainMapEx(collections.ChainMap):
         return cm
 
     def move_to_child(self, pred, init_factory):
-        dq = collections.deque(self.maps, maxlen=50)
+        dq = collections.deque(self.maps[:50], maxlen=50)
         # or None
         if not any(pred(dq[0]) or dq.rotate()  for _ in range(len(dq))):
             dq.appendleft(init_factory())
@@ -73,7 +73,7 @@ class Closed:
 
 class Cache:
     # views.maps = [{init_dct}, {init_dct}, ...]  masked parents 
-    views:  ClassVar[ChainMapEx] = ChainMapEx({"id": -1, "change_counter": -1})
+    views: ClassVar[ChainMapEx] = ChainMapEx({"id": -1, "change_counter": -1})
     busy: ClassVar[bool] = False
 
     @classmethod
@@ -121,7 +121,7 @@ class Cache:
 
             return {
                 "id": view.id(),
-                "region_a": rgn_a_pts,
+                "symbol_point": rgn_a_pts,
                 "scanned_point": scanned_pts,
                 "symbol_level": sym_levels,
                 "symbol_info": sym_infos,
@@ -138,7 +138,7 @@ class Cache:
 
     @classmethod
     def sectional_view(cls, visible_point):
-        idx = bisect.bisect_left(cls.views["region_a"], visible_point) - 1
+        idx = bisect.bisect_left(cls.views["symbol_point"], visible_point) - 1
         if idx < 0:
             return {}, -1
 
@@ -156,9 +156,9 @@ class Cache:
 
         section, ignoredpt = closes[0].cut(visible_point)
         closes[0] = section
-        shutter = (cl.true.fill(15)  for cl in closes)
+        shutters = (cl.true.fill(15)  for cl in closes)
 
-        hiding = itertools.chain.from_iterable(zip(shutter, sym_dcts))
+        hiding = itertools.chain.from_iterable(zip(shutters, sym_dcts))
 
         visible_idtlvl = dict(ChainMapEx(*hiding))
         visible_symbol = {idt: info  for idt, info in visible_idtlvl.items()

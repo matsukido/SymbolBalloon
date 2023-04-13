@@ -3,7 +3,7 @@ import sublime_plugin
 
 import html
 import re
-import itertools
+import itertools as itools
 import operator as opr
 import time
 import math
@@ -26,42 +26,42 @@ def scan_manager(scanlines):
 
     def _scan_manager_(view, start_point, end_point):
 
-        max_lines = Pkg.settings.get("max_scan_lines", 10000)
-        stopper = iter(range(max_lines))
+        stopper = iter(range(Pkg.settings.get("max_scan_lines", 20000)))
 
-        sym_pts = Cache.views["region_a"]
+        sym_pts = Cache.views["symbol_point"]
         idx = sym_pts.index(start_point)
-        sympts = itertools.takewhile(lambda pt: pt < end_point, sym_pts[idx:])
+        sympts = itools.takewhile(lambda pt: pt < end_point, sym_pts[idx:])
         
         zipped = zip(Cache.views["scanned_point"][idx:], 
-                     Cache.views["region_a"][idx + 1:],
+                     Cache.views["symbol_point"][idx + 1:],
                      sympts,
                      Cache.views["symbol_level"][idx:])
 
         for scanpt, nextsym, sympt, symlvl in zipped:
 
-            delta_rgn = sublime.Region(scanpt, min(nextsym, end_point))
-            start_row = 2 if sympt == scanpt else 0
+            delta_rgn = view.full_line(sublime.Region(scanpt, min(nextsym, end_point)))
+            start_row = 2 if scanpt == sympt else 0
 
-            lrgns = zip(view.lines(delta_rgn)[start_row:], stopper)
-            linergns = [tpl[0]  for tpl in lrgns if not tpl[0].empty()]
+            fulllines = view.substr(delta_rgn).splitlines(True)
 
-            new_scannedpt, closed = scanlines(view, 
-                                              linergns,
-                                              symlvl,
-                                              start_row)
+            linestart_pts = itools.accumulate(map(len, fulllines), initial=delta_rgn.a)
+
+            zp = itools.islice(zip(linestart_pts, fulllines, stopper), start_row, None)
+            line_tpls = ((pt, lin)  for pt, lin, _ in zp if not lin == "\n")
+
+            new_scannedpt, closed = scanlines(view, line_tpls, symlvl)
 
             if new_scannedpt != -1:
                 Cache.views["scanned_point"][idx] = new_scannedpt
+                Cache.views["closed"][idx].appendflat(closed)
 
-            Cache.views["closed"][idx].appendflat(closed)
             idx += 1
 
     return _scan_manager_
 
 
 @scan_manager
-def scan_lines(view, line_regions, target_indentlevel, start_row=0):
+def scan_lines(view, line_tuples, target_indentlevel):
 
     ignrchr = Pkg.settings.get("ignored_characters", "") + "\n"
     ignrscope = Pkg.settings.get("ignored_scope", "_")
@@ -69,12 +69,11 @@ def scan_lines(view, line_regions, target_indentlevel, start_row=0):
     if Cache.views["using_tab"]:
         tabsize = 1
 
-    tpls = ((rgn.a, view.substr(rgn))  for rgn in line_regions)
     tgtlvl = target_indentlevel
     pt = -1
     closed = Closed()
 
-    for line_a, linestr in tpls:
+    for line_a, linestr in line_tuples:
         pt = line_a
 
         if tgtlvl == 0:
@@ -95,6 +94,7 @@ def scan_lines(view, line_regions, target_indentlevel, start_row=0):
 
         if topchr in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
             closed.false.setdefault(idtlvl, pt)
+
         else:
             closed.true.setdefault(idtlvl, pt)
             tgtlvl = idtlvl - 1
@@ -118,7 +118,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         def annotation_navigate(href):
             nonlocal vw
             vw.erase_regions(Const.KEY_ID)
-
+        stt=time.perf_counter_ns()
         vw = self.view
         if Cache.busy:
             return
@@ -132,7 +132,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         offset = Pkg.settings.get("row_offset", 0)
         vpoint = vw.text_point(vw.rowcol(vpoint)[0] + offset, 0)
 
-        a_pts = itertools.takewhile(lambda pt: pt < vpoint, Cache.views["region_a"])
+        a_pts = itools.takewhile(lambda pt: pt < vpoint, Cache.views["symbol_point"])
         nearly_symbol = dict(zip(Cache.views["symbol_level"], a_pts))
         if not nearly_symbol:
             return
@@ -166,14 +166,14 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             symbolpt_b = symbol.region.b
             prm_max = symbolpt_b + 1500
 
-            prm_a = itertools.dropwhile(lambda pnt:
+            prm_a = itools.dropwhile(lambda pnt:
                         opr.xor(
                             vw.match_selector(pnt, is_param),
                             vw.match_selector(pnt, "meta.function | meta.class")
                         ), range(symbolpt_b, prm_max))
             try:
                 prm_begin = next(prm_a)
-                prm_b = itertools.dropwhile(lambda pnt:
+                prm_b = itools.dropwhile(lambda pnt:
                                     vw.match_selector(pnt, is_param), prm_a)
                 prm_end = next(prm_b, prm_max)
                 param = vw.substr(sublime.Region(prm_begin, prm_end))
@@ -224,7 +224,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                            annotations=[_annotation_html()],
                            annotation_color="#aa0",
                            on_navigate=annotation_navigate)
-
+        print(time.perf_counter_ns()-stt)
 
 def _annotation_html():
     return ('<body><a style="text-decoration: none" href="">x</a>'
