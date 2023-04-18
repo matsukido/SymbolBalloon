@@ -47,11 +47,11 @@ def scan_manager(scanlines):
 
             start_row = 2 if scanpt == sympt else 0
             zp = itools.islice(zip(linestart_pts, fulllines, stopper), start_row, None)
-            line_tpls = ((pt, lin)  for pt, lin, _ in zp if not lin == "\n")
+            line_tpls = ((pt, fline)  for pt, fline, _ in zp if not fline.isspace())
 
             new_scannedpt, closed = scanlines(view, line_tpls, symlvl)
 
-            if new_scannedpt != -1:
+            if new_scannedpt is not None:
                 Cache.views["scanned_point"][idx] = new_scannedpt
                 Cache.views["closed"][idx].appendflat(closed)
 
@@ -70,7 +70,7 @@ def scan_lines(view, line_tuples, target_indentlevel):
         tabsize = 1
 
     tgtlvl = target_indentlevel
-    pt = -1
+    pt = None
     closed = Closed()
 
     for line_a, linestr in line_tuples:
@@ -84,11 +84,8 @@ def scan_lines(view, line_tuples, target_indentlevel):
 
         else:
             topchr = linestr.lstrip()[0:1]
-            if topchr == "":
-                continue
-
             idtwidth = linestr.index(topchr)
-            idtlvl = int(math.ceil(idtwidth / tabsize))
+            idtlvl = math.ceil(idtwidth / tabsize)
             if tgtlvl < idtlvl:
                 continue
 
