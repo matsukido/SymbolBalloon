@@ -1,6 +1,6 @@
 import sublime
 
-import itertools
+import itertools as itools
 import collections
 import dataclasses as dcls
 import bisect
@@ -32,7 +32,7 @@ class ChainMapEx(collections.ChainMap):
         self.maps = [dict(self.items())]
 
     def limit_filter(self, limit):
-        return {k: v  for k, v in self.items() if v < limit}
+        return ChainMapEx({k: v  for k, v in self.items() if v < limit})
 
     def fill(self, stop):
         # {3: 44, 1: 77}.fill(6) --> {2: -1, 3: 44, 4: -1, 5: -1, 1: 77}
@@ -61,14 +61,14 @@ class Closed:
         self.false.appendflat(closed.false)
 
     def cut(self, visible_point):
-        dct_t = self.true.limit_filter(visible_point)
-        dct_f = self.false.limit_filter(visible_point)
+        cm_t = self.true.limit_filter(visible_point)
+        cm_f = self.false.limit_filter(visible_point)
 
-        ignoredpt = -1
-        if (idt := min(dct_f, default=99)) < min(dct_t):
-            ignoredpt = dct_f[idt]
+        ignoredpt = None
+        if (idt := min(cm_f, default=99)) < min(cm_t):
+            ignoredpt = cm_f[idt]
 
-        return Closed(ChainMapEx(dct_t), ChainMapEx(dct_f)), ignoredpt
+        return Closed(cm_t, cm_f), ignoredpt
 
 
 class Cache:
@@ -140,7 +140,7 @@ class Cache:
     def sectional_view(cls, visible_point):
         idx = bisect.bisect_left(cls.views["symbol_point"], visible_point) - 1
         if idx < 0:
-            return {}, -1
+            return ({}, None)
 
         reverse = slice(idx, None, -1)
         idtlvls = cls.views["symbol_level"][reverse]
@@ -150,7 +150,7 @@ class Cache:
         sym_infos = cls.views["symbol_info"][reverse]
         closes = cls.views["closed"][reverse]
         if not closes:
-            return {}, -1
+            return ({}, None)
 
         sym_dcts = ({idt: info}  for idt, info, _ in zip(idtlvls, sym_infos, stopper))
 
@@ -158,7 +158,7 @@ class Cache:
         closes[0] = section
         shutters = (cl.true.fill(15)  for cl in closes)
 
-        hiding = itertools.chain.from_iterable(zip(shutters, sym_dcts))
+        hiding = itools.chain.from_iterable(zip(shutters, sym_dcts))
 
         visible_idtlvl = dict(ChainMapEx(*hiding))
         visible_symbol = {idt: info  for idt, info in visible_idtlvl.items()

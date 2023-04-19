@@ -1,6 +1,6 @@
 ## SymbolBalloon
 
-Sublime Text 4085+
+For Sublime Text 4
 
 画面上部の行が属するシンボルを表示します。
 
@@ -32,8 +32,3 @@ Sublime Text 4085+
 	{ "keys": ["  "], "command": "break_symbol_balloon" },
 ]
 ```
-
-
-### Settings
-
-"popup_mode"　は動作不安定です。

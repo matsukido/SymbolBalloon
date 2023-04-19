@@ -13,10 +13,15 @@ from .byproducts import *
 
 
 class SymbolBalloonListner(sublime_plugin.EventListener):
+    is_panel = False
 
     def on_activated_async(self, view):
         if view.element() is None:
-            Cache.query_init(view)
+            if not self.is_panel:
+                Cache.query_init(view)
+            self.is_panel = False
+        else:
+            self.is_panel = True
 
     def on_pre_close(self, view):
         del Cache.views.maps[0]
@@ -40,6 +45,8 @@ def scan_manager(scanlines):
 
         for scanpt, nextsym, sympt, symlvl, idx in zipped:
 
+            if sympt < end_point < scanpt:
+                continue
             delta_rgn = view.full_line(sublime.Region(scanpt, min(nextsym, end_point)))
             fulllines = view.substr(delta_rgn).splitlines(True)
 
@@ -63,7 +70,7 @@ def scan_manager(scanlines):
 @scan_manager
 def scan_lines(view, line_tuples, target_indentlevel):
 
-    ignrchr = Pkg.settings.get("ignored_characters", "") + "\n"
+    ignrchr = Pkg.settings.get("ignored_characters", "")
     ignrscope = Pkg.settings.get("ignored_scope", "_")
     tabsize = int(view.settings().get('tab_size', 8))
     if Cache.views["using_tab"]:
@@ -73,18 +80,17 @@ def scan_lines(view, line_tuples, target_indentlevel):
     pt = None
     closed = Closed()
 
-    for line_a, linestr in line_tuples:
-        pt = line_a
+    for pt, fullline in line_tuples:
 
         if tgtlvl == 0:
-            topchr = linestr[0:1]
+            topchr = fullline[0:1]
             if topchr.isspace():
                 continue
             idtwidth = idtlvl = 0
 
         else:
-            topchr = linestr.lstrip()[0:1]
-            idtwidth = linestr.index(topchr)
+            topchr = fullline.lstrip()[0:1]
+            idtwidth = fullline.index(topchr)
             idtlvl = math.ceil(idtwidth / tabsize)
             if tgtlvl < idtlvl:
                 continue
@@ -121,9 +127,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             return
         Cache.busy = True
 
-        sublime.set_timeout(Cache.reset_busy, 5)
         Cache.query_init(vw)
         Pkg.init_settings()
+        sublime.set_timeout(Cache.reset_busy, Pkg.settings.get("timeout", 3))
 
         vpoint = vw.visible_region().begin()
         offset = Pkg.settings.get("row_offset", 0)
@@ -143,8 +149,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
 
         else:
             visible_symbol, _ = Cache.sectional_view(vpoint + 1)
-            ignoredpt = -1
-            time.sleep(0.002)
+            ignoredpt = None
+            completed = True
+            time.sleep(Pkg.settings.get("sleep", 2) / 1000)
 
         symbol_infos = [*visible_symbol.values()]
         if not symbol_infos:
@@ -203,20 +210,13 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                     '<div class="arrow"></div>'
                 f'<div class="balloon">{markup}</div></body>')
 
-        if Pkg.settings.get("popup_mode", False):
-            vw.show_popup(con,
-                          max_width=800,
-                          location=vpoint,
-                          on_hide=True,
-                          on_navigate=navigate)
-        else:
-            vw.add_phantom(Const.KEY_ID,
-                           sublime.Region(vpoint),
-                           con,
-                           sublime.LAYOUT_BELOW,
-                           on_navigate=navigate)
+        vw.add_phantom(Const.KEY_ID,
+                       sublime.Region(vpoint),
+                       con,
+                       sublime.LAYOUT_BELOW,
+                       on_navigate=navigate)
 
-        if 0 < ignoredpt and Pkg.settings.get("show_ignored_indentation", False):
+        if ignoredpt is not None and Pkg.settings.get("show_ignored_indentation", False):
             vw.add_regions(Const.KEY_ID,
                            [sublime.Region(ignoredpt)],
                            annotations=[_annotation_html()],
