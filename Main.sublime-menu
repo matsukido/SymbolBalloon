@@ -7,13 +7,6 @@
         "children": [
           { "caption": "SymbolBalloon",
             "children": [
-              { "caption": "README",
-                "command": "open_file",
-                "args": {
-                  "file": "${packages}/SymbolBalloon/README.md"
-                }
-              },
-              { "caption": "-" },
               { "caption": "Settings",
                 "command": "edit_settings",
                 "args": {

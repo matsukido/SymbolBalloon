@@ -13,15 +13,15 @@ class FoldToOutlineCommand(sublime_plugin.TextCommand):
 
         vw = self.view
         Cache.query_init(vw)
-        rgn_a = Cache.views["symbol_point"]
+        sym_pts = Cache.views["symbol_point"]
 
-        ab = map(opr.methodcaller("to_tuple"), map(vw.line, rgn_a[:-1]))
+        ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts[:-1]))
         flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
         a_pt = next(flat, None)
         if a_pt is None:
             return
         # fillvalue=view.size()
-        bababb = itools.zip_longest(flat, flat, fillvalue=rgn_a[-1])
+        bababb = itools.zip_longest(flat, flat, fillvalue=sym_pts[-1])
         ba_rgns = itools.starmap(sublime.Region, bababb)
         vw.fold(list(ba_rgns))
 

@@ -123,20 +123,15 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             vw.erase_regions(Const.KEY_ID)
 
         vw = self.view
-        if Cache.busy:
-            return
-        Cache.busy = True
-
         Cache.query_init(vw)
         Pkg.init_settings()
-        sublime.set_timeout(Cache.reset_busy, Pkg.settings.get("timeout", 3))
 
         vpoint = vw.visible_region().begin()
         offset = Pkg.settings.get("row_offset", 0)
         vpoint = vw.text_point(vw.rowcol(vpoint)[0] + offset, 0)
 
-        a_pts = itools.takewhile(lambda pt: pt < vpoint, Cache.views["symbol_point"])
-        nearly_symbol = dict(zip(Cache.views["symbol_level"], a_pts))
+        sym_pts = itools.takewhile(lambda pt: pt < vpoint, Cache.views["symbol_point"])
+        nearly_symbol = dict(zip(Cache.views["symbol_level"], sym_pts))
         if not nearly_symbol:
             return
 
@@ -151,7 +146,6 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             visible_symbol, _ = Cache.sectional_view(vpoint + 1)
             ignoredpt = None
             completed = True
-            time.sleep(Pkg.settings.get("sleep", 2) / 1000)
 
         symbol_infos = [*visible_symbol.values()]
         if not symbol_infos:
