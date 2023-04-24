@@ -8,8 +8,8 @@ import operator as opr
 import time
 import math
 
-from .containers import Const, Pkg, ChainMapEx, Closed, Cache
-from .byproducts import *
+from .sub.containers import Const, Pkg, ChainMapEx, Closed, Cache
+from .sub.byproducts import FTOCmd, GTLSCmd
 
 
 class SymbolBalloonListner(sublime_plugin.EventListener):
@@ -273,3 +273,11 @@ class ClearCacheCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         Cache.views = ChainMapEx({"id": -1, "change_counter": -1})
+
+
+class FoldToOutlineCommand(FTOCmd):
+    pass
+
+
+class GotoTopLevelSymbolCommand(GTLSCmd):
+    pass
