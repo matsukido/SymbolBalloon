@@ -15,4 +15,12 @@
 		"caption": "SymbolBalloon: README",
 		"command": "open_file","args": {"file": "${packages}/SymbolBalloon/README.md"}
 	},
+	{
+		"caption": "SymbolBalloon: Settings",
+		"command": "edit_settings",
+		"args": {
+			"base_file": "${packages}/SymbolBalloon/symbol_balloon.sublime-settings",
+			"default": "{\n\t$0\n}\n"
+		}
+	},
 ]
