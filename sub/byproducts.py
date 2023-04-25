@@ -62,25 +62,26 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
         vw = self.view
         Cache.query_init(vw)
-        symlvl = Cache.views["symbol_level"]
-        if not symlvl:
+        symlvls = Cache.views["symbol_level"]
+        if not symlvls:
             return
 
-        toplvl = min(symlvl)
-        lvl_info = zip(symlvl, Cache.views["symbol_info"])
-        infos = (info  for lvl, info in lvl_info if lvl == toplvl)
+        toplvl = min(symlvls)
+        kind_tpls = map(opr.attrgetter("kind"), vw.symbol_regions())
+        zipped = zip(symlvls, Cache.views["symbol_info"], kind_tpls)
+        tpls = ((info, kind)  for lvl, info, kind in zipped if lvl == toplvl)
 
         ref_begin = vw.sel()[0].begin()
         symrgns = []
         qpitems = []
         index = -1
-        for info in infos:
+        for info, kind in tpls:
 
             index += (1 if info.region.begin() < ref_begin else 0)
             symrgns.append(info.region)
             qpitems.append(sublime.QuickPanelItem(
                       trigger=info.name, 
-                      kind=info.kind))
+                      kind=kind))
 
         vw.window().show_quick_panel(
                 items=qpitems, 

@@ -89,8 +89,8 @@ class Cache:
             is_source = "Markdown" not in view.syntax().name
             level = view.indentation_level if is_source else heading_level
 
-            Symbol = collections.namedtuple("Symbol", ["region", "name", "kind"])
-            syminfos = (Symbol(info.region, info.name, info.kind)
+            Symbol = collections.namedtuple("Symbol", ["region", "name"])
+            syminfos = (Symbol(info.region, info.name)
                                     for info in view.symbol_regions())
             
             rgn_a_pts = array.array("L")
