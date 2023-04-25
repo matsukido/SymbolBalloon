@@ -16,6 +16,8 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
     is_panel = False
 
     def on_activated_async(self, view):
+        if view.syntax() is None:
+            return          # when opening settings
         if view.element() is None:
             if not self.is_panel:
                 Cache.query_init(view)
@@ -24,6 +26,8 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
             self.is_panel = True
 
     def on_pre_close(self, view):
+        Cache.views.move_to_child(lambda dct: dct["id"] == view.id(),
+                                  lambda: {"id": -1})
         del Cache.views.maps[0]
 
 

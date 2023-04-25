@@ -2,7 +2,7 @@
 
 For Sublime Text 4
 
-Displays the symbol the row at the top of the window belongs to
+Displays the symbol the row at the top of the window belongs to.
 
 ![cap](https://user-images.githubusercontent.com/123632250/233623111-6da3c17f-a99c-4704-9633-12cde2b90cb4.PNG)
 
@@ -44,6 +44,6 @@ Displays the symbol the row at the top of the window belongs to
 ### Installation
 
 - Code > Download ZIP
-- Unzip and change the folder name to "SymbolBalloon"
+- Unzip and change the folder name to "SymbolBalloon".
 - (ST Menu) Preferences > Browse Packages
-- Move SymbolBalloon folder to the folder that appears
+- Move SymbolBalloon folder to the folder that appears.
