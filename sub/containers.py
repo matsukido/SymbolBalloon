@@ -162,5 +162,4 @@ class Cache:
         visible_idtlvl = dict(ChainMapEx(*hiding))
         visible_symbol = {idt: info  for idt, info in visible_idtlvl.items()
                                                 if not isinstance(info, int)}
-        return visible_symbol, ignoredpt
-
+        return (visible_symbol, ignoredpt)
