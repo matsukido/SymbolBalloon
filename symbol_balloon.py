@@ -37,7 +37,7 @@ def scan_manager(scanlines):
 
         stopper = iter(range(1, Pkg.settings.get("max_scan_lines", 20000)))
 
-        sym_pts = Cache.views["symbol_point"]
+        sym_pts = Cache.views["symbol_point"] + (Cache.views["size"], )
         index = sym_pts.index(start_point)
         sympts = itools.takewhile(lambda pt: pt < end_point, sym_pts[index:])
         
@@ -108,7 +108,7 @@ def scan_lines(view, line_tuples, target_indentlevel):
             if tgtlvl < 0:
                 break
 
-    return pt, closed
+    return (pt, closed)
 
 
 class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
@@ -151,10 +151,10 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             ignoredpt = None
             completed = True
 
-        symbol_infos = [*visible_symbol.values()]
-        if not symbol_infos:
+        if not visible_symbol:
             return
-        
+        symbol_infos = [*visible_symbol.values()]
+
         vw.run_command("break_symbol_balloon")
         symbol_infos.sort(key=opr.attrgetter("region.a"))
         markup = ""

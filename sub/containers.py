@@ -1,6 +1,7 @@
 import sublime
 
 import itertools as itools
+import operator as opr
 import collections
 import dataclasses as dcls
 import bisect
@@ -68,7 +69,7 @@ class Closed:
         if (idt := min(cm_f, default=99)) < min(cm_t):
             ignoredpt = cm_f[idt]
 
-        return Closed(cm_t, cm_f), ignoredpt
+        return (Closed(cm_t, cm_f), ignoredpt)
 
 
 class Cache:
@@ -88,55 +89,55 @@ class Cache:
             nonlocal view
             is_source = "Markdown" not in view.syntax().name
             level = view.indentation_level if is_source else heading_level
+            sr = iter(view.symbol_regions())
+            tpls = tuple(map(opr.attrgetter("name", "region", "kind"), sr))
+            if not tpls:
+                return {"id": -99}  # huge file?
 
-            Symbol = collections.namedtuple("Symbol", ["region", "name"])
-            syminfos = (Symbol(info.region, info.name)
-                                    for info in view.symbol_regions())
+            names, regions, kinds = zip(*tpls)
+            a_pts, b_pts = zip(*regions)
+
+            levels = array.array("B", map(level, a_pts))
+
+            dcts = ({lvl + 1: pt}  for lvl, pt in zip(levels, a_pts))
+            closes = map(Closed, map(ChainMapEx, dcts))
+            # closed.false=ChainMapEx({})
             
-            rgn_a_pts = array.array("L")
-            scanned_pts = array.array("L")
-            sym_levels = array.array("B")
-            sym_infos = []
-            closes = []
-            using_tab = False
+            lines = view.substr(sublime.Region(0, 30000)).splitlines()[0:300]
+            startchrs = (line[0]  for line in lines if line)
+            spaces = (ch  for ch in startchrs if ch.isspace())
 
-            for info in syminfos:
-                rgna = info.region.a
-                rgn_a_pts.append(rgna)
-                scanned_pts.append(rgna)
-
-                idt = level(rgna)
-                if 0 < idt:
-                    if view.substr(view.line(rgna))[0] == "\t":
-                        using_tab = True 
-                sym_levels.append(idt)
-                sym_infos.append(info)
-
-                clos = Closed()
-                clos.true.appendflat({idt + 1: rgna})
-                closes.append(clos)
-
-            rgn_a_pts.append(view.size())
+            is_tab = collections.deque(spaces, maxlen=20)
+            using_tab = (set(is_tab) <= frozenset("\t"))
 
             return {
                 "id": view.id(),
-                "symbol_point": rgn_a_pts,
-                "scanned_point": scanned_pts,
-                "symbol_level": sym_levels,
-                "symbol_info": sym_infos,
-                "closed": closes,
+                "symbol_point": tuple(a_pts),
+                "symbol_end_point": tuple(b_pts),
+                "scanned_point": list(a_pts),
+                "symbol_level": levels,
+                "symbol_name": tuple(names),
+                "closed": list(closes),
+                "kind": tuple(kinds),
+
+                "size": view.size(),
                 "change_counter": view.change_count(),
                 "using_tab": using_tab
             }
 
         cls.views.move_to_child(lambda dct: dct["id"] == view.id(), init_dct)
 
-        if cls.views["change_counter"] != view.change_count() or \
-                                        not cls.views["symbol_info"]:
-            cls.views.maps[0] = init_dct()
+        if cls.views["change_counter"] != view.change_count():
+            cls.views.update(init_dct())
 
     @classmethod
     def sectional_view(cls, visible_point):
+
+        def to_symbol_region(tpl, syntax="", typ=1, kind=(0, "", "")):
+            name, a_pt, b_pt = tpl
+            sr = sublime.SymbolRegion(name, sublime.Region(a_pt, b_pt), syntax, typ, kind)
+            return sr
+
         idx = bisect.bisect_left(cls.views["symbol_point"], visible_point) - 1
         if idx < 0:
             return ({}, None)
@@ -146,7 +147,9 @@ class Cache:
         toplvl = min(idtlvls)
         stopper = range(idtlvls.index(toplvl) + 1)
 
-        sym_infos = cls.views["symbol_info"][reverse]
+        sym_infos = zip(cls.views["symbol_name"][reverse],
+                        cls.views["symbol_point"][reverse],
+                        cls.views["symbol_end_point"][reverse])
         closes = cls.views["closed"][reverse]
         if not closes:
             return ({}, None)
@@ -160,6 +163,8 @@ class Cache:
         hiding = itools.chain.from_iterable(zip(shutters, sym_dcts))
 
         visible_idtlvl = dict(ChainMapEx(*hiding))
-        visible_symbol = {idt: info  for idt, info in visible_idtlvl.items()
-                                                if not isinstance(info, int)}
+        visible_symbol = {idt: to_symbol_region(info)
+                            for idt, info in visible_idtlvl.items()
+                                        if not isinstance(info, int)}
+
         return (visible_symbol, ignoredpt)

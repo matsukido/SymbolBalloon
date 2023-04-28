@@ -15,13 +15,13 @@ class FTOCmd(sublime_plugin.TextCommand):
         Cache.query_init(vw)
         sym_pts = Cache.views["symbol_point"]
 
-        ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts[:-1]))
+        ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts))
         flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
         a_pt = next(flat, None)
         if a_pt is None:
             return
-        # fillvalue=view.size()
-        bababb = itools.zip_longest(flat, flat, fillvalue=sym_pts[-1])
+        size = Cache.views["size"]
+        bababb = itools.zip_longest(flat, flat, fillvalue=size)
         ba_rgns = itools.starmap(sublime.Region, bababb)
         vw.fold(list(ba_rgns))
 
@@ -67,8 +67,12 @@ class GTLSCmd(sublime_plugin.TextCommand):
             return
 
         toplvl = min(symlvls)
-        kind_tpls = map(opr.attrgetter("kind"), vw.symbol_regions())
-        zipped = zip(symlvls, Cache.views["symbol_info"], kind_tpls)
+        kind_tpls = Cache.views["kind"]
+        sym_infos = zip(Cache.views["symbol_name"],
+                        Cache.views["symbol_point"],
+                        Cache.views["symbol_end_point"])
+
+        zipped = zip(symlvls, sym_infos, kind_tpls)
         tpls = ((info, kind)  for lvl, info, kind in zipped if lvl == toplvl)
 
         ref_begin = vw.sel()[0].begin()
@@ -76,11 +80,11 @@ class GTLSCmd(sublime_plugin.TextCommand):
         qpitems = []
         index = -1
         for info, kind in tpls:
-
-            index += (1 if info.region.begin() < ref_begin else 0)
-            symrgns.append(info.region)
+            name, a_pt, b_pt = info
+            index += (1 if a_pt < ref_begin else 0)
+            symrgns.append(sublime.Region(a_pt, b_pt))
             qpitems.append(sublime.QuickPanelItem(
-                      trigger=info.name, 
+                      trigger=name, 
                       kind=kind))
 
         vw.window().show_quick_panel(
