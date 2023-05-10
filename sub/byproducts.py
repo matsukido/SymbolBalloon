@@ -67,7 +67,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
             return
 
         toplvl = min(symlvls)
-        kind_tpls = Cache.views["kind"]
+        kind_tpls = itools.zip_longest(*Cache.views["kind"], fillvalue="")
         sym_infos = zip(Cache.views["symbol_name"],
                         Cache.views["symbol_point"],
                         Cache.views["symbol_end_point"])

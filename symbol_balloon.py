@@ -5,7 +5,6 @@ import html
 import re
 import itertools as itools
 import operator as opr
-import time
 import math
 
 from .sub.containers import Const, Pkg, ChainMapEx, Closed, Cache

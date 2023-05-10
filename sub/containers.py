@@ -96,6 +96,7 @@ class Cache:
 
             names, regions, kinds = zip(*tpls)
             a_pts, b_pts = zip(*regions)
+            ids, letters, _ = zip(*kinds)
 
             levels = array.array("B", map(level, a_pts))
 
@@ -118,7 +119,7 @@ class Cache:
                 "symbol_level": levels,
                 "symbol_name": tuple(names),
                 "closed": list(closes),
-                "kind": tuple(kinds),
+                "kind": (array.array("B", ids), tuple(letters), ("", )),
 
                 "size": view.size(),
                 "change_counter": view.change_count(),
