@@ -92,7 +92,7 @@ class Cache:
             sr = iter(view.symbol_regions())
             tpls = tuple(map(opr.attrgetter("name", "region", "kind"), sr))
             if not tpls:
-                return {"id": -99}  # huge file?
+                return {"id": -99}
 
             names, regions, kinds = zip(*tpls)
             a_pts, b_pts = zip(*regions)
@@ -119,7 +119,7 @@ class Cache:
                 "symbol_level": levels,
                 "symbol_name": tuple(names),
                 "closed": list(closes),
-                "kind": (array.array("B", ids), tuple(letters), ("", )),
+                "symbol_kind": (array.array("B", ids), tuple(letters), ("", )),
 
                 "size": view.size(),
                 "change_counter": view.change_count(),

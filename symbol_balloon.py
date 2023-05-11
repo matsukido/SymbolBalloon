@@ -16,7 +16,7 @@ class SymbolBalloonListner(sublime_plugin.EventListener):
 
     def on_activated_async(self, view):
         if view.syntax() is None:
-            return          # when opening settings
+            return
         if view.element() is None:
             if not self.is_panel:
                 Cache.query_init(view)

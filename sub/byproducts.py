@@ -3,6 +3,7 @@ import sublime_plugin
 
 import itertools as itools
 import operator as opr
+import bisect
 
 from .containers import Cache
 
@@ -66,26 +67,24 @@ class GTLSCmd(sublime_plugin.TextCommand):
         if not symlvls:
             return
 
+        zipped = zip(symlvls,
+                     Cache.views["symbol_point"],
+                     Cache.views["symbol_end_point"],
+                     Cache.views["symbol_name"],
+                     itools.zip_longest(*Cache.views["symbol_kind"], fillvalue=""))
+
         toplvl = min(symlvls)
-        kind_tpls = itools.zip_longest(*Cache.views["kind"], fillvalue="")
-        sym_infos = zip(Cache.views["symbol_name"],
-                        Cache.views["symbol_point"],
-                        Cache.views["symbol_end_point"])
+        sym_infos = (info  for lvl, *info in zipped if lvl == toplvl)
 
-        zipped = zip(symlvls, sym_infos, kind_tpls)
-        tpls = ((info, kind)  for lvl, info, kind in zipped if lvl == toplvl)
+        symrgns, qpitems = [], []
 
-        ref_begin = vw.sel()[0].begin()
-        symrgns = []
-        qpitems = []
-        index = -1
-        for info, kind in tpls:
-            name, a_pt, b_pt = info
-            index += (1 if a_pt < ref_begin else 0)
+        for a_pt, b_pt, name, kind in sym_infos:
+
             symrgns.append(sublime.Region(a_pt, b_pt))
-            qpitems.append(sublime.QuickPanelItem(
-                      trigger=name, 
-                      kind=kind))
+            qpitems.append(sublime.QuickPanelItem(trigger=name, kind=kind))
+
+        a_pts, _ = zip(*symrgns)
+        index = bisect.bisect_right(a_pts, vw.sel()[0].begin()) - 1
 
         vw.window().show_quick_panel(
                 items=qpitems, 
