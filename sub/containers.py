@@ -89,10 +89,17 @@ class Cache:
             nonlocal view
             is_source = "Markdown" not in view.syntax().name
             level = view.indentation_level if is_source else heading_level
-            sr = iter(view.symbol_regions())
-            tpls = tuple(map(opr.attrgetter("name", "region", "kind"), sr))
-            if not tpls:
+            sr = view.symbol_regions()
+            
+            if sr is None:
+                # print("non")
                 return {"id": -99}
+            elif sr == []:
+                # print("emp")
+
+                return {"id": view.id(), "symbol_point": tuple(), "symbol_level": tuple()}
+
+            tpls = tuple(map(opr.attrgetter("name", "region", "kind"), sr))
 
             names, regions, kinds = zip(*tpls)
             a_pts, b_pts = zip(*regions)

@@ -3,7 +3,6 @@ import sublime_plugin
 
 import itertools as itools
 import operator as opr
-import bisect
 
 from .containers import Cache
 
@@ -65,6 +64,8 @@ class GTLSCmd(sublime_plugin.TextCommand):
         Cache.query_init(vw)
         symlvls = Cache.views["symbol_level"]
         if not symlvls:
+            vw.window().run_command("show_overlay", 
+                                    args={"overlay": "goto", "text": "@"})
             return
 
         zipped = zip(symlvls,
@@ -77,18 +78,18 @@ class GTLSCmd(sublime_plugin.TextCommand):
         sym_infos = (info  for lvl, *info in zipped if lvl == toplvl)
 
         symrgns, qpitems = [], []
+        index = itools.count(-1)
+        tgtpt = vw.sel()[0].begin()
 
         for a_pt, b_pt, name, kind in sym_infos:
 
             symrgns.append(sublime.Region(a_pt, b_pt))
             qpitems.append(sublime.QuickPanelItem(trigger=name, kind=kind))
-
-        a_pts, _ = zip(*symrgns)
-        index = bisect.bisect_right(a_pts, vw.sel()[0].begin()) - 1
+            (a_pt <= tgtpt) and next(index)
 
         vw.window().show_quick_panel(
                 items=qpitems, 
                 on_highlight=lambda idx: focus_symbol(symrgns[idx], qpitems[idx].trigger),
                 on_select=lambda idx: commit_symbol(symrgns, idx),
-                selected_index=index,
+                selected_index=next(index),
                 placeholder="Top level")
