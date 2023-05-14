@@ -66,7 +66,7 @@ class Closed:
         cm_f = self.false.limit_filter(visible_point)
 
         ignoredpt = None
-        if (idt := min(cm_f, default=99)) < min(cm_t):
+        if (idt := min(cm_f, default=99)) < min(cm_t, default=99):
             ignoredpt = cm_f[idt]
 
         return (Closed(cm_t, cm_f), ignoredpt)
@@ -97,7 +97,7 @@ class Cache:
                 return {"id": view.id(), "change_counter": view.change_count(), 
                         "symbol_point": tuple(), "symbol_level": tuple()}
 
-            tpls = tuple(map(opr.attrgetter("name", "region", "kind"), sr))
+            tpls = map(opr.attrgetter("name", "region", "kind"), sr)
 
             names, regions, kinds = zip(*tpls)
             a_pts, b_pts = zip(*regions)

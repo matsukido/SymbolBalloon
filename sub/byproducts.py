@@ -14,12 +14,13 @@ class FTOCmd(sublime_plugin.TextCommand):
         vw = self.view
         Cache.query_init(vw)
         sym_pts = Cache.views["symbol_point"]
+        if not sym_pts:
+            return
 
         ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts))
         flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
         a_pt = next(flat, None)
-        if a_pt is None:
-            return
+        
         size = Cache.views["size"]
         bababb = itools.zip_longest(flat, flat, fillvalue=size)
         ba_rgns = itools.starmap(sublime.Region, bababb)
