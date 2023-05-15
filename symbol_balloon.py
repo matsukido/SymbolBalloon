@@ -34,7 +34,7 @@ def scan_manager(scanlines):
 
     def _scan_manager_(view, start_point, end_point):
 
-        stopper = iter(range(1, Pkg.settings.get("max_scan_lines", 20000)))
+        stopper = itools.repeat(True, Pkg.settings.get("max_scan_lines", 20000))
 
         sym_pts = Cache.views["symbol_point"] + (Cache.views["size"], )
         index = sym_pts.index(start_point)

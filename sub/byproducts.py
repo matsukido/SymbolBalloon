@@ -19,7 +19,7 @@ class FTOCmd(sublime_plugin.TextCommand):
 
         ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts))
         flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
-        a_pt = next(flat, None)
+        a_pt = next(flat, -1)
         
         size = Cache.views["size"]
         bababb = itools.zip_longest(flat, flat, fillvalue=size)

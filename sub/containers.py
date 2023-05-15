@@ -92,10 +92,11 @@ class Cache:
             sr = view.symbol_regions()
             
             if sr is None:
-                return {"id": view.id(), "change_counter": -1}
+                return {"id": view.id(), "change_counter": -1,
+                        "symbol_point": (), "symbol_level": ()}
             elif sr == []:
                 return {"id": view.id(), "change_counter": view.change_count(), 
-                        "symbol_point": tuple(), "symbol_level": tuple()}
+                        "symbol_point": (), "symbol_level": ()}
 
             tpls = map(opr.attrgetter("name", "region", "kind"), sr)
 
