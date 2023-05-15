@@ -11,21 +11,21 @@ from .sub.containers import Const, Pkg, ChainMapEx, Closed, Cache
 from .sub.byproducts import FTOCmd, GTLSCmd
 
 
-class SymbolBalloonListner(sublime_plugin.EventListener):
+class SymbolBalloonListner(sublime_plugin.ViewEventListener):
     is_panel = False
 
-    def on_activated_async(self, view):
-        if view.syntax() is None:
+    def on_activated_async(self):
+        if self.view.syntax() is None:
             return
-        if view.element() is None:
+        if self.view.element() is None:
             if not self.is_panel:
-                Cache.query_init(view)
+                Cache.query_init(self.view)
             self.is_panel = False
         else:
             self.is_panel = True
 
-    def on_pre_close(self, view):
-        Cache.views.move_to_child(lambda dct: dct["id"] == view.id(),
+    def on_pre_close(self):
+        Cache.views.move_to_child(lambda dct: dct["id"] == self.view.id(),
                                   lambda: {"id": -1})
         del Cache.views.maps[0]
 
