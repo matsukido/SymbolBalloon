@@ -167,9 +167,12 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             symbolpt_b = symbol.region.b
             prm_max = symbolpt_b + 1500
 
-            grp = itools.groupby(range(symbolpt_b, prm_max), key=lambda pnt:
-                         vw.match_selector(pnt, is_param) and
-                         vw.match_selector(pnt, "meta.function | meta.class"))
+            defrng = itools.takewhile(
+                    lambda pt: vw.match_selector(pt, "meta.function | meta.class"),
+                    range(symbolpt_b, prm_max))
+
+            grp = itools.groupby(defrng, 
+                                 key=lambda pt: vw.match_selector(pt, is_param))
 
             trueitems = filter(opr.itemgetter(0), grp)
             try:
