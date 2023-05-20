@@ -167,21 +167,20 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             symbolpt_b = symbol.region.b
             prm_max = symbolpt_b + 1500
 
-            defrng = itools.takewhile(
-                    lambda pt: vw.match_selector(pt, "meta.function | meta.class"),
-                    range(symbolpt_b, prm_max))
-
-            grp = itools.groupby(defrng, 
-                                 key=lambda pt: vw.match_selector(pt, is_param))
-
-            trueitems = filter(opr.itemgetter(0), grp)
+            prm_a = itools.dropwhile(lambda pnt:
+                        opr.xor(
+                            vw.match_selector(pnt, is_param),
+                            vw.match_selector(pnt, "meta.function | meta.class")
+                        ), range(symbolpt_b, prm_max))
             try:
-                _, prmrng = next(trueitems)
-                prm_begin, prm_end = opr.itemgetter(0, -1)(tuple(prmrng))
-                param = vw.substr(sublime.Region(prm_begin, prm_end + 1))
+                prm_begin = next(prm_a)
+                prm_b = itools.dropwhile(lambda pnt:
+                                    vw.match_selector(pnt, is_param), prm_a)
+                prm_end = next(prm_b, prm_max)
+                param = vw.substr(sublime.Region(prm_begin, prm_end))
                 param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
 
-            except (StopIteration, IndexError):
+            except StopIteration:
                 param = ""
 
             row = vw.rowcol(symbolpt)[0] + 1
