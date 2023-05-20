@@ -14,12 +14,13 @@ class FTOCmd(sublime_plugin.TextCommand):
         vw = self.view
         Cache.query_init(vw)
         sym_pts = Cache.views["symbol_point"]
+        if not sym_pts:
+            return
 
         ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts))
         flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
-        a_pt = next(flat, None)
-        if a_pt is None:
-            return
+        a_pt = next(flat, -1)
+        
         size = Cache.views["size"]
         bababb = itools.zip_longest(flat, flat, fillvalue=size)
         ba_rgns = itools.starmap(sublime.Region, bababb)
@@ -64,32 +65,32 @@ class GTLSCmd(sublime_plugin.TextCommand):
         Cache.query_init(vw)
         symlvls = Cache.views["symbol_level"]
         if not symlvls:
+            vw.window().run_command("show_overlay", 
+                                    args={"overlay": "goto", "text": "@"})
             return
 
+        zipped = zip(symlvls,
+                     Cache.views["symbol_point"],
+                     Cache.views["symbol_end_point"],
+                     Cache.views["symbol_name"],
+                     itools.zip_longest(*Cache.views["symbol_kind"], fillvalue=""))
+
         toplvl = min(symlvls)
-        kind_tpls = Cache.views["kind"]
-        sym_infos = zip(Cache.views["symbol_name"],
-                        Cache.views["symbol_point"],
-                        Cache.views["symbol_end_point"])
+        sym_infos = (info  for lvl, *info in zipped if lvl == toplvl)
 
-        zipped = zip(symlvls, sym_infos, kind_tpls)
-        tpls = ((info, kind)  for lvl, info, kind in zipped if lvl == toplvl)
+        symrgns, qpitems = [], []
+        index = itools.count(-1)
+        tgtpt = vw.sel()[0].begin()
 
-        ref_begin = vw.sel()[0].begin()
-        symrgns = []
-        qpitems = []
-        index = -1
-        for info, kind in tpls:
-            name, a_pt, b_pt = info
-            index += (1 if a_pt < ref_begin else 0)
+        for a_pt, b_pt, name, kind in sym_infos:
+
             symrgns.append(sublime.Region(a_pt, b_pt))
-            qpitems.append(sublime.QuickPanelItem(
-                      trigger=name, 
-                      kind=kind))
+            qpitems.append(sublime.QuickPanelItem(trigger=name, kind=kind))
+            (a_pt <= tgtpt) and next(index)
 
         vw.window().show_quick_panel(
                 items=qpitems, 
                 on_highlight=lambda idx: focus_symbol(symrgns[idx], qpitems[idx].trigger),
                 on_select=lambda idx: commit_symbol(symrgns, idx),
-                selected_index=index,
+                selected_index=next(index),
                 placeholder="Top level")

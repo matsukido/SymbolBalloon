@@ -66,7 +66,7 @@ class Closed:
         cm_f = self.false.limit_filter(visible_point)
 
         ignoredpt = None
-        if (idt := min(cm_f, default=99)) < min(cm_t):
+        if (idt := min(cm_f, default=99)) < min(cm_t, default=99):
             ignoredpt = cm_f[idt]
 
         return (Closed(cm_t, cm_f), ignoredpt)
@@ -89,13 +89,20 @@ class Cache:
             nonlocal view
             is_source = "Markdown" not in view.syntax().name
             level = view.indentation_level if is_source else heading_level
-            sr = iter(view.symbol_regions())
-            tpls = tuple(map(opr.attrgetter("name", "region", "kind"), sr))
-            if not tpls:
-                return {"id": -99}  # huge file?
+            sr = view.symbol_regions()
+            
+            if sr is None:
+                return {"id": view.id(), "change_counter": -1,
+                        "symbol_point": (), "symbol_level": ()}
+            elif sr == []:
+                return {"id": view.id(), "change_counter": view.change_count(), 
+                        "symbol_point": (), "symbol_level": ()}
+
+            tpls = map(opr.attrgetter("name", "region", "kind"), sr)
 
             names, regions, kinds = zip(*tpls)
             a_pts, b_pts = zip(*regions)
+            ids, letters, _ = zip(*kinds)
 
             levels = array.array("B", map(level, a_pts))
 
@@ -118,7 +125,7 @@ class Cache:
                 "symbol_level": levels,
                 "symbol_name": tuple(names),
                 "closed": list(closes),
-                "kind": tuple(kinds),
+                "symbol_kind": (array.array("B", ids), tuple(letters), ("", )),
 
                 "size": view.size(),
                 "change_counter": view.change_count(),
