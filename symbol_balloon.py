@@ -139,7 +139,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             return
 
         top_level_pt = nearly_symbol[min(nearly_symbol)]
-        is_source = "Markdown" not in vw.syntax().name
+        is_source = vw.scope_name(0).startswith("source")
 
         if is_source:
             completed = scan_lines(vw, top_level_pt, vpoint + 1)
@@ -159,6 +159,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         markup = ""
         is_param = ("meta.function.parameters | meta.class.parameters "
                     "| meta.class.inheritance | meta.method.parameters")
+        is_def = "meta.function | meta.class | meta.section.latex"
         tabsize = int(vw.settings().get('tab_size', 8))
         
         for symbol in symbol_infos:
@@ -170,7 +171,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             prm_a = itools.dropwhile(lambda pnt:
                         opr.xor(
                             vw.match_selector(pnt, is_param),
-                            vw.match_selector(pnt, "meta.function | meta.class")
+                            vw.match_selector(pnt, is_def)
                         ), range(symbolpt_b, prm_max))
             try:
                 prm_begin = next(prm_a)
