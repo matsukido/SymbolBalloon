@@ -97,7 +97,7 @@ class Cache:
                         if title in symline:
                             break
                     else:
-                        lvl = 0
+                        lvl = 9
                     return lvl
                 else:
                     return view.indentation_level(point)

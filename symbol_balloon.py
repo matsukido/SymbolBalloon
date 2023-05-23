@@ -185,9 +185,18 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                 param = ""
 
             row = vw.rowcol(symbolpt)[0] + 1
+            
+            linergn = vw.line(symbolpt)
+            symbolline = vw.substr(linergn)
 
-            symbolline = vw.substr(vw.line(symbolpt))
-            kwd, sym, prm = symbolline.partition(symbol.name.strip())
+            if is_source:
+                symname = symbol.name
+            else:
+                rgns, scps = zip(*vw.extract_tokens_with_scopes(linergn))
+                nmrgns = itools.compress(rgns, map(lambda scp: "entity.name" in scp, scps))
+                symname = "".join(map(vw.substr, nmrgns))
+
+            kwd, sym, prm = symbolline.partition(symname or "---")
 
             kwd, sym, prm, param = map(lambda st:
                 html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
