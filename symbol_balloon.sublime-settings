@@ -8,4 +8,7 @@
 	// https://www.sublimetext.com/docs/minihtml.html#colors
 	"symbol_color": "var(--foreground)",
 	"font_size": 0.95,
+
+	// Move mouse cursor to the top of the window.
+	"mini_outline": true,
 }
