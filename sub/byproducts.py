@@ -3,6 +3,7 @@ import sublime_plugin
 
 import itertools as itools
 import operator as opr
+import functools as ftools
 
 from .containers import Cache
 
@@ -94,3 +95,37 @@ class GTLSCmd(sublime_plugin.TextCommand):
                 on_select=lambda idx: commit_symbol(symrgns, idx),
                 selected_index=next(index),
                 placeholder="Top level")
+
+
+class MOCmd(sublime_plugin.TextCommand):
+    # Mini outline
+    def run(self, edit):
+
+        def navigate(href):
+            nonlocal vw
+            vw.show(vw.size())
+            vw.show(int(href),
+                    show_surrounds=False,
+                    keep_to_left=True)
+            vw.erase_regions("MiniOutline")
+
+        vw = self.view
+        Cache.query_init(vw)
+
+        sym_pts = Cache.views["symbol_point"]
+        symlines = itools.starmap(sublime.Region, map(vw.line, sym_pts))
+        to_html = ftools.partial(vw.export_to_html, 
+                                 minihtml=True, enclosing_tags=False, font_size=False)
+        htmls = map(to_html, symlines)
+        joined= "".join(map('<a href="{}">{}</a><br>'.format, sym_pts, htmls))
+
+        con = (f'<body id="minioutline">'
+                   f'<style> a{{text-decoration: none; font-size: 0.9rem;}}</style>'
+               f'{joined}</body>')
+
+        vw.erase_regions("MiniOutline")
+        vw.add_regions(key="MiniOutline", 
+                       regions=[sublime.Region(vw.full_line(vw.visible_region().a).b)], 
+                       annotations=[con],
+                       annotation_color="#36c",
+                       on_navigate=navigate)

@@ -8,9 +8,13 @@ import operator as opr
 import math
 
 from .sub.containers import Const, Pkg, ChainMapEx, Closed, Cache
-from .sub.byproducts import FTOCmd, GTLSCmd
+from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd
 
 
+def plugin_loaded():
+    Pkg.init_settings()
+
+    
 class SymbolBalloonListner(sublime_plugin.ViewEventListener):
     is_panel = False
 
@@ -28,6 +32,13 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
         Cache.views.move_to_child(lambda dct: dct["id"] == self.view.id(),
                                   lambda: {"id": -1})
         del Cache.views.maps[0]
+
+    def on_hover(self, point, hover_zone):
+        if not Pkg.settings.get("mini_outline", False):
+            return
+        vr = self.view.visible_region().begin()
+        if self.view.line(self.view.full_line(vr)).contains(point):
+            self.view.run_command("mini_outline")
 
 
 def scan_manager(scanlines):
@@ -293,4 +304,8 @@ class FoldToOutlineCommand(FTOCmd):
 
 
 class GotoTopLevelSymbolCommand(GTLSCmd):
+    pass
+
+
+class MiniOutlineCommand(MOCmd):
     pass
