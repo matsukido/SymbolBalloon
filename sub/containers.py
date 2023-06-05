@@ -82,12 +82,30 @@ class Cache:
         def init_dct():
 
             def heading_level(point):
-                nonlocal view
-                pt = view.line(point).begin()
-                return view.extract_scope(pt).end() - pt
+                nonlocal view, syntax
+
+                if syntax == "Markdown":
+                    pt = view.line(point).begin()
+                    return view.extract_scope(pt).end() - pt
+
+                elif "LaTeX" in syntax:
+                    titledct = {"\\part": 0, "\\chapter": 1, "\\section": 2, "\\subsection": 3,
+                                "\\subsubsection": 4, "\\paragraph": 5, "\\subparagraph": 6}
+                    symline = view.substr(view.line(point)).lstrip()
+                    lvl = 0
+                    for title, lvl in titledct.items():
+                        if title in symline:
+                            break
+                    else:
+                        lvl = 9
+                    return lvl
+                else:
+                    return view.indentation_level(point)
 
             nonlocal view
-            is_source = "Markdown" not in view.syntax().name
+            syntax = view.syntax().name
+            is_source = view.scope_name(0).startswith("source")
+
             level = view.indentation_level if is_source else heading_level
             sr = view.symbol_regions()
             
