@@ -34,10 +34,15 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
         del Cache.views.maps[0]
 
     def on_hover(self, point, hover_zone):
-        if not Pkg.settings.get("mini_outline", False):
+        if (hover_zone == sublime.HOVER_GUTTER or 
+                        not Pkg.settings.get("mini_outline", False)):
             return
-        vr = self.view.visible_region().begin()
-        if self.view.line(self.view.full_line(vr)).contains(point):
+        vw = self.view
+        vpt = vw.full_line(vw.visible_region().begin()).end()
+        tgtrgn = sublime.Region(vpt, vw.text_point(vw.rowcol(vpt)[0] + 4, 0))
+        rgns = vw.get_regions("MiniOutline")
+
+        if tgtrgn.contains(point) and not (rgns and tgtrgn.contains(rgns[0])):
             self.view.run_command("mini_outline")
 
 

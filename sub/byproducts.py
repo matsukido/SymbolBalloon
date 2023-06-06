@@ -113,19 +113,21 @@ class MOCmd(sublime_plugin.TextCommand):
         Cache.query_init(vw)
 
         sym_pts = Cache.views["symbol_point"]
-        symlines = itools.starmap(sublime.Region, map(vw.line, sym_pts))
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
-        htmls = map(to_html, symlines)
+        htmls = map(to_html, map(vw.line, sym_pts))
         joined= "".join(map('<a href="{}">{}</a><br>'.format, sym_pts, htmls))
 
-        con = (f'<body id="minioutline">'
+        con = (f'<body id="minioutline"><div style="margin: 0.3rem, 0.8rem">'
                    f'<style> a{{text-decoration: none; font-size: 0.9rem;}}</style>'
-               f'{joined}</body>')
+               f'{joined}</div></body>')
+
+        vpt = vw.visible_region().begin()
+        point = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
 
         vw.erase_regions("MiniOutline")
         vw.add_regions(key="MiniOutline", 
-                       regions=[sublime.Region(vw.full_line(vw.visible_region().a).b)], 
+                       regions=[sublime.Region(point)], 
                        annotations=[con],
                        annotation_color="#36c",
                        on_navigate=navigate)
