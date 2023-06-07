@@ -112,22 +112,35 @@ class MOCmd(sublime_plugin.TextCommand):
         vw = self.view
         Cache.query_init(vw)
 
+        vw.run_command("raise_symbol_balloon")  # scan lines
+        vw.run_command("break_symbol_balloon")
+        
         sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
         htmls = map(to_html, map(vw.line, sym_pts))
-        joined= "".join(map('<a href="{}">{}</a><br>'.format, sym_pts, htmls))
-
-        con = (f'<body id="minioutline"><div style="margin: 0.3rem, 0.8rem">'
-                   f'<style> a{{text-decoration: none; font-size: 0.9rem;}}</style>'
-               f'{joined}</div></body>')
+        hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
         vpt = vw.visible_region().begin()
-        point = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
+        curr_pt = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
+
+        visible_symbol, _ = Cache.sectional_view(curr_pt)
+        vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
+        flatten = (rgn.contains(pt)  for pt, rgn in itools.product(sym_pts, vsrgns))
+        selector = map(any, zip(*[flatten] * len(visible_symbol)))
+
+        indicated = (f'<div class="indicate">{href}</div>' if sel else href 
+                                                 for href, sel in zip(hrefs, selector))
+        astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
+        indicator = '.indicate{border-left: 0.25rem solid var(--greenish);}'
+
+        con = (f'<body id="minioutline"><style>{astyle}{indicator}</style>'
+                   f'<div style="margin: 0.3rem, 0.8rem">{"".join(indicated)}</div>'
+                '</body>')
 
         vw.erase_regions("MiniOutline")
         vw.add_regions(key="MiniOutline", 
-                       regions=[sublime.Region(point)], 
+                       regions=[sublime.Region(curr_pt)], 
                        annotations=[con],
                        annotation_color="#36c",
                        on_navigate=navigate)
