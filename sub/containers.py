@@ -154,6 +154,9 @@ class Cache:
 
         if cls.views["change_counter"] != view.change_count():
             cls.views.update(init_dct())
+            return True
+            
+        return False
 
     @classmethod
     def sectional_view(cls, visible_point):

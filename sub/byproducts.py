@@ -99,7 +99,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
-    def run(self, edit):
+    def do(self, current_point):
 
         def navigate(href):
             nonlocal vw
@@ -110,24 +110,18 @@ class MOCmd(sublime_plugin.TextCommand):
             vw.erase_regions("MiniOutline")
 
         vw = self.view
-        Cache.query_init(vw)
-
-        vw.run_command("raise_symbol_balloon")  # scan lines
-        vw.run_command("break_symbol_balloon")
-        
         sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
         htmls = map(to_html, map(vw.line, sym_pts))
         hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
-        vpt = vw.visible_region().begin()
-        curr_pt = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
-
-        visible_symbol, _ = Cache.sectional_view(curr_pt)
+        visible_symbol, _ = Cache.sectional_view(current_point)
         vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
         flatten = (rgn.contains(pt)  for pt, rgn in itools.product(sym_pts, vsrgns))
         selector = map(any, zip(*[flatten] * len(visible_symbol)))
+        if not visible_symbol:
+            selector = itools.repeat(False)
 
         indicated = (f'<div class="indicate">{href}</div>' if sel else href 
                                                  for href, sel in zip(hrefs, selector))
@@ -140,7 +134,7 @@ class MOCmd(sublime_plugin.TextCommand):
 
         vw.erase_regions("MiniOutline")
         vw.add_regions(key="MiniOutline", 
-                       regions=[sublime.Region(curr_pt)], 
+                       regions=[sublime.Region(current_point)], 
                        annotations=[con],
                        annotation_color="#36c",
                        on_navigate=navigate)

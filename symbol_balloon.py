@@ -40,10 +40,10 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
         vw = self.view
         vpt = vw.full_line(vw.visible_region().begin()).end()
         tgtrgn = sublime.Region(vpt, vw.text_point(vw.rowcol(vpt)[0] + 4, 0))
-        rgns = vw.get_regions("MiniOutline")
+        tgtpts = (tgtrgn.a, tgtrgn.b)
 
-        if tgtrgn.contains(point) and not (rgns and tgtrgn.contains(rgns[0])):
-            self.view.run_command("mini_outline")
+        if tgtrgn.contains(point):
+            vw.run_command("mini_outline", args={ "target_points": tgtpts })
 
 
 def scan_manager(scanlines):
@@ -313,4 +313,21 @@ class GotoTopLevelSymbolCommand(GTLSCmd):
 
 
 class MiniOutlineCommand(MOCmd):
-    pass
+
+    def run(self, edit, target_points):
+
+        vw = self.view
+        update = Cache.query_init(vw)
+        if not Cache.views["symbol_point"]:
+            return
+        tgtrgn = sublime.Region(target_points[0], target_points[1])
+        rgns = vw.get_regions("MiniOutline")
+
+        if update or not (rgns and tgtrgn.contains(rgns[0])):
+            vpt = vw.visible_region().begin()
+            curr_pt = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
+
+            if vw.scope_name(0).startswith("source"):
+                scan_lines(vw, Cache.views["symbol_point"][0], curr_pt)
+            
+            self.do(curr_pt)
