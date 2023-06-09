@@ -118,10 +118,12 @@ class MOCmd(sublime_plugin.TextCommand):
 
         visible_symbol, _ = Cache.sectional_view(current_point)
         vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
-        flatten = (rgn.contains(pt)  for pt, rgn in itools.product(sym_pts, vsrgns))
-        selector = map(any, zip(*[flatten] * len(visible_symbol)))
+        
         if not visible_symbol:
             selector = itools.repeat(False)
+        else:
+            rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
+            selector = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 
         indicated = (f'<div class="indicate">{href}</div>' if sel else href 
                                                  for href, sel in zip(hrefs, selector))

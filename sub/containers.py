@@ -194,5 +194,7 @@ class Cache:
         visible_symbol = {idt: to_symbol_region(info)
                             for idt, info in visible_idtlvl.items()
                                         if not isinstance(info, int)}
-
+        idtlvls = sorted(visible_symbol)
+        visible_symbol = {idt: visible_symbol[idt]  for idt in idtlvls}
+        
         return (visible_symbol, ignoredpt)
