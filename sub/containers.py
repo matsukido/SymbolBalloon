@@ -154,6 +154,9 @@ class Cache:
 
         if cls.views["change_counter"] != view.change_count():
             cls.views.update(init_dct())
+            return True
+            
+        return False
 
     @classmethod
     def sectional_view(cls, visible_point):
@@ -191,5 +194,7 @@ class Cache:
         visible_symbol = {idt: to_symbol_region(info)
                             for idt, info in visible_idtlvl.items()
                                         if not isinstance(info, int)}
-
+        idtlvls = sorted(visible_symbol)
+        visible_symbol = {idt: visible_symbol[idt]  for idt in idtlvls}
+        
         return (visible_symbol, ignoredpt)

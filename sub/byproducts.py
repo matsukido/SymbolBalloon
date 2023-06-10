@@ -99,7 +99,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
-    def run(self, edit):
+    def do(self, current_point):
 
         def navigate(href):
             nonlocal vw
@@ -110,24 +110,33 @@ class MOCmd(sublime_plugin.TextCommand):
             vw.erase_regions("MiniOutline")
 
         vw = self.view
-        Cache.query_init(vw)
-
         sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
         htmls = map(to_html, map(vw.line, sym_pts))
-        joined= "".join(map('<a href="{}">{}</a><br>'.format, sym_pts, htmls))
+        hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
-        con = (f'<body id="minioutline"><div style="margin: 0.3rem, 0.8rem">'
-                   f'<style> a{{text-decoration: none; font-size: 0.9rem;}}</style>'
-               f'{joined}</div></body>')
+        visible_symbol, _ = Cache.sectional_view(current_point)
+        vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
+        
+        if not visible_symbol:
+            selector = itools.repeat(False)
+        else:
+            rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
+            selector = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 
-        vpt = vw.visible_region().begin()
-        point = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
+        indicated = (f'<div class="indicate">{href}</div>' if sel else href 
+                                                 for href, sel in zip(hrefs, selector))
+        astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
+        indicator = '.indicate{border-left: 0.25rem solid var(--greenish);}'
+
+        con = (f'<body id="minioutline"><style>{astyle}{indicator}</style>'
+                   f'<div style="margin: 0.3rem, 0.8rem">{"".join(indicated)}</div>'
+                '</body>')
 
         vw.erase_regions("MiniOutline")
         vw.add_regions(key="MiniOutline", 
-                       regions=[sublime.Region(point)], 
+                       regions=[sublime.Region(current_point)], 
                        annotations=[con],
                        annotation_color="#36c",
                        on_navigate=navigate)
