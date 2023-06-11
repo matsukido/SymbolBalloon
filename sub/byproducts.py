@@ -99,7 +99,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
-    def do(self, current_point):
+    def do(self, current_point, outline):
 
         def navigate(href):
             nonlocal vw
@@ -110,10 +110,14 @@ class MOCmd(sublime_plugin.TextCommand):
             vw.erase_regions("MiniOutline")
 
         vw = self.view
-        sym_pts = Cache.views["symbol_point"]
+        sym_pts = Cache.views["symbol_end_point"]
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
-        htmls = map(to_html, map(vw.line, sym_pts))
+        regionmap = map(vw.line, sym_pts)
+        if outline == "symbol":
+            regionmap = itools.starmap(sublime.Region, 
+                                       zip(map(opr.attrgetter("a"), regionmap), sym_pts))
+        htmls = map(to_html, regionmap)
         hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
         visible_symbol, _ = Cache.sectional_view(current_point)

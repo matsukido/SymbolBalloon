@@ -4,6 +4,7 @@ import sublime_plugin
 import html
 import re
 import itertools as itools
+import functools as ftools
 import operator as opr
 import math
 
@@ -35,7 +36,7 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
 
     def on_hover(self, point, hover_zone):
         if (hover_zone == sublime.HOVER_GUTTER or 
-                        not Pkg.settings.get("mini_outline", False)):
+                        Pkg.settings.get("mini_outline", "none") == "none"):
             return
         vw = self.view
         vpt = vw.visible_region().begin()
@@ -175,7 +176,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                     "| meta.class.inheritance | meta.method.parameters")
         is_def = "meta.function | meta.class | meta.section.latex"
         tabsize = int(vw.settings().get('tab_size', 8))
-        
+        symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
+        to_html = ftools.partial(vw.export_to_html, 
+                                 minihtml=True, enclosing_tags=False, font_size=False)
         for symbol in symbol_infos:
 
             symbolpt = symbol.region.a
@@ -210,11 +213,14 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                 nmrgns = itools.compress(rgns, map(lambda scp: "entity.name" in scp, scps))
                 symname = "".join(map(vw.substr, nmrgns))
 
-            kwd, sym, prm = symbolline.partition(symname or "---")
+            if symcolor == "color_scheme":
+                kwd, sym, prm = to_html(linergn), "", ""
+            else:
+                kwd, sym, prm = symbolline.partition(symname or "---")
 
-            kwd, sym, prm, param = map(lambda st:
-                html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
-                (kwd, sym, prm, param))
+                kwd, sym, prm, param = map(lambda st:
+                    html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
+                    (kwd, sym, prm, param))
             
             markup += (f'<a class="noline" href="{symbolpt}" title="{param}">'
                             f'<span class="symbolline">{kwd}</span>'
@@ -223,7 +229,6 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                             f'<span class="row">&nbsp;..{row}</span>'
                         '</a><br>')
 
-        symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
         fontsize = Pkg.settings.get("font_size", 0.95)
         ballooncolor = "#dcf" if completed else "#d77"
 
@@ -329,4 +334,4 @@ class MiniOutlineCommand(MOCmd):
             if vw.scope_name(0).startswith("source"):
                 scan_lines(vw, Cache.views["symbol_point"][0], curr_pt)
             
-            self.do(curr_pt)
+            self.do(curr_pt, Pkg.settings.get("mini_outline", "none"))

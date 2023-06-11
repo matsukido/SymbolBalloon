@@ -6,9 +6,12 @@
 	"ignored_scope": "comment",
 
 	// https://www.sublimetext.com/docs/minihtml.html#colors
+	// Or "color_scheme"
 	"symbol_color": "var(--foreground)",
+	
 	"font_size": 0.95,
 
 	// Move mouse cursor to the top of the window.
-	"mini_outline": true,
+	// "none" or "symbol" or "line"
+	"mini_outline": "symbol",
 }
