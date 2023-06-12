@@ -110,14 +110,17 @@ class MOCmd(sublime_plugin.TextCommand):
             vw.erase_regions("MiniOutline")
 
         vw = self.view
-        sym_pts = Cache.views["symbol_end_point"]
+        sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
-        regionmap = map(vw.line, sym_pts)
+        regions = map(vw.line, sym_pts)
+
         if outline == "symbol":
-            regionmap = itools.starmap(sublime.Region, 
-                                       zip(map(opr.attrgetter("a"), regionmap), sym_pts))
-        htmls = map(to_html, regionmap)
+            symrgns = ((line.a, pt) if line.contains(pt) else line  
+                               for line, pt in zip(regions, Cache.views["symbol_end_point"]))
+            regions = itools.starmap(sublime.Region, symrgns)
+
+        htmls = map(to_html, regions)
         hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
         visible_symbol, _ = Cache.sectional_view(current_point)

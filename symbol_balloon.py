@@ -179,27 +179,20 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
         to_html = ftools.partial(vw.export_to_html, 
                                  minihtml=True, enclosing_tags=False, font_size=False)
+        preds = [
+            lambda pt: vw.match_selector(pt, is_param) ^ vw.match_selector(pt, is_def),
+            lambda pt: vw.match_selector(pt, is_param)]
+
         for symbol in symbol_infos:
 
             symbolpt = symbol.region.a
             symbolpt_b = symbol.region.b
             prm_max = symbolpt_b + 1500
+            itrng = iter(range(symbolpt_b, prm_max))
 
-            prm_a = itools.dropwhile(lambda pnt:
-                        opr.xor(
-                            vw.match_selector(pnt, is_param),
-                            vw.match_selector(pnt, is_def)
-                        ), range(symbolpt_b, prm_max))
-            try:
-                prm_begin = next(prm_a)
-                prm_b = itools.dropwhile(lambda pnt:
-                                    vw.match_selector(pnt, is_param), prm_a)
-                prm_end = next(prm_b, prm_max)
-                param = vw.substr(sublime.Region(prm_begin, prm_end))
-                param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
-
-            except StopIteration:
-                param = ""
+            drops = map(itools.dropwhile, preds, [itrng] * 2)
+            param = vw.substr(sublime.Region(*map(next, drops, [prm_max] * 2)))
+            param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
 
             row = vw.rowcol(symbolpt)[0] + 1
             
