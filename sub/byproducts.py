@@ -12,25 +12,44 @@ class FTOCmd(sublime_plugin.TextCommand):
     # Fold to outline
     def run(self, edit):
 
+        def focus_level(level):
+            nonlocal vw, sym_pts, sym_lvls
+
+            vw.unfold(sublime.Region(0, vw.size()))
+            selectors = map(opr.le, sym_lvls, itools.repeat(int(level)))
+            selected_pts = itools.compress(sym_pts, selectors)
+
+            ab = map(opr.methodcaller("to_tuple"), map(vw.line, selected_pts))
+            flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
+            a_pt = next(flat, -1)
+            
+            size = Cache.views["size"]
+            bababb = itools.zip_longest(flat, flat, fillvalue=size)
+            ba_rgns = itools.starmap(sublime.Region, bababb)
+            vw.fold(list(ba_rgns))
+
+            vw.show(a_pt + 1,
+                    show_surrounds= False,
+                    animate=        True,
+                    keep_to_left=   True)
+
         vw = self.view
         Cache.query_init(vw)
         sym_pts = Cache.views["symbol_point"]
         if not sym_pts:
             return
 
-        ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts))
-        flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
-        a_pt = next(flat, -1)
-        
-        size = Cache.views["size"]
-        bababb = itools.zip_longest(flat, flat, fillvalue=size)
-        ba_rgns = itools.starmap(sublime.Region, bababb)
-        vw.fold(list(ba_rgns))
+        sym_lvls = Cache.views["symbol_level"]
+        lvls = sorted(list(set(sym_lvls)), reverse=True)
+        qpitems = [*map(str, lvls)]
 
-        vw.show(a_pt + 1,
-                show_surrounds= False,
-                animate=        True,
-                keep_to_left=   True)
+        vw.window().show_quick_panel(
+                items=qpitems, 
+                on_highlight=lambda idx: focus_level(qpitems[idx]),
+                on_select=lambda idx: idx,
+                selected_index=0,
+                placeholder="Folding level")
+
 
 
 class GTLSCmd(sublime_plugin.TextCommand):
@@ -112,23 +131,23 @@ class MOCmd(sublime_plugin.TextCommand):
         vw = self.view
         sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
-                                 minihtml=True, enclosing_tags=False, font_size=False)
+                                 minihtml=True, enclosing_tags=False, 
+                                 font_size=False, font_family=False)
         regions = map(vw.line, sym_pts)
 
         if outline == "symbol":
-            symrgns = ((line.a, pt) if line.contains(pt) else line  
+            regions = (sublime.Region(line.a, pt) if line.contains(pt) else line  
                                for line, pt in zip(regions, Cache.views["symbol_end_point"]))
-            regions = itools.starmap(sublime.Region, symrgns)
 
         htmls = map(to_html, regions)
         hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
         visible_symbol, _ = Cache.sectional_view(current_point)
-        vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
         
         if not visible_symbol:
             selector = itools.repeat(False)
         else:
+            vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
             rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
             selector = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 

@@ -175,10 +175,12 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         is_param = ("meta.function.parameters | meta.class.parameters "
                     "| meta.class.inheritance | meta.method.parameters")
         is_def = "meta.function | meta.class | meta.section.latex"
+        
         tabsize = int(vw.settings().get('tab_size', 8))
         symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
         to_html = ftools.partial(vw.export_to_html, 
-                                 minihtml=True, enclosing_tags=False, font_size=False)
+                                 minihtml=True, enclosing_tags=False, 
+                                 font_size=False, font_family=False)
         preds = [
             lambda pt: vw.match_selector(pt, is_param) ^ vw.match_selector(pt, is_def),
             lambda pt: vw.match_selector(pt, is_param)]
@@ -193,11 +195,11 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             drops = map(itools.dropwhile, preds, [itrng] * 2)
             param = vw.substr(sublime.Region(*map(next, drops, [prm_max] * 2)))
             param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
+            param = param.replace('"', '&quot;').replace("'", "&#39;")
 
             row = vw.rowcol(symbolpt)[0] + 1
             
             linergn = vw.line(symbolpt)
-            symbolline = vw.substr(linergn)
 
             if is_source:
                 symname = symbol.name
@@ -209,7 +211,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             if symcolor == "color_scheme":
                 kwd, sym, prm = to_html(linergn), "", ""
             else:
-                kwd, sym, prm = symbolline.partition(symname or "---")
+                kwd, sym, prm = vw.substr(linergn).partition(symname or "---")
 
                 kwd, sym, prm, param = map(lambda st:
                     html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
