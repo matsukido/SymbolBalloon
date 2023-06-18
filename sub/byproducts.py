@@ -12,11 +12,11 @@ class FTOCmd(sublime_plugin.TextCommand):
     # Fold to outline
     def run(self, edit):
 
-        def focus_level(level):
+        def focus_level(target_level):
             nonlocal vw, sym_pts, sym_lvls
 
             vw.unfold(sublime.Region(0, vw.size()))
-            selectors = map(opr.le, sym_lvls, itools.repeat(int(level)))
+            selectors = map(opr.le, sym_lvls, itools.repeat(int(target_level)))
             selected_pts = itools.compress(sym_pts, selectors)
 
             ab = map(opr.methodcaller("to_tuple"), map(vw.line, selected_pts))
@@ -42,6 +42,10 @@ class FTOCmd(sublime_plugin.TextCommand):
         sym_lvls = Cache.views["symbol_level"]
         lvls = sorted(list(set(sym_lvls)), reverse=True)
         qpitems = [*map(str, lvls)]
+        
+        if len(qpitems) == 1:
+            focus_level(qpitems[0])
+            return
 
         vw.window().show_quick_panel(
                 items=qpitems, 
@@ -118,7 +122,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
-    def do(self, current_point, outline):
+    def do(self, current_point, mode):
 
         def navigate(href):
             nonlocal vw
@@ -135,7 +139,7 @@ class MOCmd(sublime_plugin.TextCommand):
                                  font_size=False, font_family=False)
         regions = map(vw.line, sym_pts)
 
-        if outline == "symbol":
+        if mode == "symbol":
             regions = (sublime.Region(line.a, pt) if line.contains(pt) else line  
                                for line, pt in zip(regions, Cache.views["symbol_end_point"]))
 
@@ -145,14 +149,14 @@ class MOCmd(sublime_plugin.TextCommand):
         visible_symbol, _ = Cache.sectional_view(current_point)
         
         if not visible_symbol:
-            selector = itools.repeat(False)
+            selectors = itools.repeat(False)
         else:
             vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
             rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
-            selector = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
+            selectors = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 
         indicated = (f'<div class="indicate">{href}</div>' if sel else href 
-                                                 for href, sel in zip(hrefs, selector))
+                                                 for href, sel in zip(hrefs, selectors))
         astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
         indicator = '.indicate{border-left: 0.25rem solid var(--greenish);}'
 

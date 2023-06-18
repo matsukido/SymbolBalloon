@@ -329,4 +329,4 @@ class MiniOutlineCommand(MOCmd):
             if vw.scope_name(0).startswith("source"):
                 scan_lines(vw, Cache.views["symbol_point"][0], curr_pt)
             
-            self.do(curr_pt, Pkg.settings.get("mini_outline", "none"))
+            self.do(curr_pt, Pkg.settings.get("mini_outline", "symbol"))
