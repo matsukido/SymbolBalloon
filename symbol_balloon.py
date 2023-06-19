@@ -195,7 +195,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             drops = map(itools.dropwhile, preds, [itrng] * 2)
             param = vw.substr(sublime.Region(*map(next, drops, [prm_max] * 2)))
             param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
-            param = param.replace('"', '&quot;').replace("'", "&#39;")
+            param = html.escape(param, quote=True).expandtabs(tabsize).replace(" ",  "&nbsp;")
 
             row = vw.rowcol(symbolpt)[0] + 1
             
