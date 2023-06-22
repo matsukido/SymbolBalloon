@@ -128,13 +128,6 @@ class Cache:
             closes = map(Closed, map(ChainMapEx, dcts))
             # closed.false=ChainMapEx({})
             
-            # lines = view.substr(sublime.Region(0, 30000)).splitlines()[0:300]
-            # startchrs = (line[0]  for line in lines if line)
-            # spaces = (ch  for ch in startchrs if ch.isspace())
-
-            # is_tab = collections.deque(spaces, maxlen=20)
-            # using_tab = (set(is_tab) <= frozenset("\t"))
-
             return {
                 "id": view.id(),
                 "symbol_point": tuple(a_pts),
@@ -147,7 +140,6 @@ class Cache:
 
                 "size": view.size(),
                 "change_counter": view.change_count(),
-                # "using_tab": using_tab
             }
 
         cls.views.move_to_child(lambda dct: dct["id"] == view.id(), init_dct)

@@ -92,8 +92,6 @@ def scan_lines(view, line_tuples, target_indentlevel):
     ignrchr = Pkg.settings.get("ignored_characters", "")
     ignrscope = Pkg.settings.get("ignored_scope", "_")
     tabsize = int(view.settings().get('tab_size', 8))
-    # if Cache.views["using_tab"]:
-    #     tabsize = 1
 
     tgtlvl = target_indentlevel
     pt = None
@@ -115,7 +113,7 @@ def scan_lines(view, line_tuples, target_indentlevel):
             if tgtlvl < idtlvl:
                 continue
             idtwidth = fullline.index(topchr)
-            
+
         if topchr in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
             closed.false.setdefault(idtlvl, pt)
 
@@ -245,7 +243,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                            annotations=[_annotation_html()],
                            annotation_color="#aa0",
                            on_navigate=annotation_navigate)
-        # print(Cache.views["closed"])
+
 
 def _annotation_html():
     return ('<body><a style="text-decoration: none" href="">x</a>'
