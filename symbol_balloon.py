@@ -92,8 +92,6 @@ def scan_lines(view, line_tuples, target_indentlevel):
     ignrchr = Pkg.settings.get("ignored_characters", "")
     ignrscope = Pkg.settings.get("ignored_scope", "_")
     tabsize = int(view.settings().get('tab_size', 8))
-    if Cache.views["using_tab"]:
-        tabsize = 1
 
     tgtlvl = target_indentlevel
     pt = None
@@ -108,11 +106,13 @@ def scan_lines(view, line_tuples, target_indentlevel):
             idtwidth = idtlvl = 0
 
         else:
-            topchr = fullline.lstrip()[0:1]
-            idtwidth = fullline.index(topchr)
+            fline = fullline.expandtabs(tabsize)
+            topchr = fline.lstrip()[0:1]
+            idtwidth = fline.index(topchr)
             idtlvl = math.ceil(idtwidth / tabsize)
             if tgtlvl < idtlvl:
                 continue
+            idtwidth = fullline.index(topchr)
 
         if topchr in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
             closed.false.setdefault(idtlvl, pt)
