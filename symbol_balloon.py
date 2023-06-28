@@ -15,7 +15,15 @@ from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd
 def plugin_loaded():
     Pkg.init_settings()
 
-    
+
+def invert_region(region, regions):
+    rgns = (region.intersection(rgn)  for rgn in regions if region.intersects(rgn))
+    flatten = itools.chain([region.a], itools.chain(*rgns), [region.b])
+    invrgns = itools.starmap(sublime.Region, zip(flatten, flatten))
+
+    return (rgn  for rgn in invrgns if rgn.a < rgn.b)
+
+
 class SymbolBalloonListner(sublime_plugin.ViewEventListener):
     is_panel = False
 
@@ -40,9 +48,13 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
             return
         vw = self.view
         vrgn = vw.visible_region()
-        vlines = vw.lines(vrgn)
 
-        unfolded_lines = itools.filterfalse(lambda line: vw.is_folded(line), vlines)
+        unfolded_rgns = invert_region(vrgn, vw.folded_regions())
+        lines = itools.chain.from_iterable(map(vw.lines, unfolded_rgns))
+
+        lines = (k  for k, v in itools.groupby(lines))      # remove duplicated lines
+        unfolded_lines = itools.filterfalse(vw.is_folded, lines)    # remove empty lines
+
         sliced = [*itools.islice(unfolded_lines, 6)][-2:]
 
         if not sliced:
