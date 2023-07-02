@@ -16,14 +16,6 @@ def plugin_loaded():
     Pkg.init_settings()
 
 
-def invert_region(region, regions):
-    rgns = (region.intersection(rgn)  for rgn in regions if region.intersects(rgn))
-    flatten = itools.chain([region.a], itools.chain(*rgns), [region.b])
-    invrgns = itools.starmap(sublime.Region, zip(flatten, flatten))
-
-    return (rgn  for rgn in invrgns if rgn.a < rgn.b)
-
-
 class SymbolBalloonListner(sublime_plugin.ViewEventListener):
     is_panel = False
 
@@ -48,25 +40,16 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
             return
         vw = self.view
         vrgn = vw.visible_region()
+        _, vis = vw.text_to_layout(vrgn.begin())
 
-        unfolded_rgns = invert_region(vrgn, vw.folded_regions())
-        lines = itools.chain.from_iterable(map(vw.lines, unfolded_rgns))
+        _, viewport = vw.viewport_extent()
+        _, mouse = vw.text_to_layout(point)
 
-        lines = (k  for k, v in itools.groupby(lines))      # remove duplicated lines
-        unfolded_lines = itools.filterfalse(vw.is_folded, lines)    # remove empty lines
+        if vis < mouse < vis + viewport*0.18:
+            curr = vw.layout_to_text((0, vis + viewport * 0.13))
+            tgt = vw.layout_to_text((0, vis + viewport * 0.18))
 
-        sliced = [*itools.islice(unfolded_lines, 6)][-2:]
-
-        if not sliced:
-            return
-        elif len(sliced) == 1:
-            sliced.append(sliced[-1])
-
-        curr, tgt = sliced
-
-        if sublime.Region(vrgn.begin(), tgt.end()).contains(point):
-            vw.run_command("mini_outline", args={ "current": curr.end(), 
-                                                  "target": tgt.end() })
+            vw.run_command("mini_outline", args={ "current": curr, "target": tgt })
 
 
 def scan_manager(scanlines):
@@ -349,5 +332,5 @@ class MiniOutlineCommand(MOCmd):
 
             if vw.scope_name(0).startswith("source"):
                 scan_lines(vw, Cache.views["symbol_point"][0], current)
-            
+
             self.do(current, Pkg.settings.get("mini_outline", "symbol"))
