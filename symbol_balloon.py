@@ -41,12 +41,13 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
         vw = self.view
         vrgn = vw.visible_region()
         _, vis = vw.text_to_layout(vrgn.begin())
+        lh = vw.line_height()
 
         _, viewport = vw.viewport_extent()
         _, mouse = vw.text_to_layout(point)
 
-        if vis < mouse < vis + viewport*0.18:
-            curr = vw.layout_to_text((0, vis + viewport * 0.13))
+        if vis - lh < mouse < vis + viewport * 0.18:
+            curr = vw.layout_to_text((0, vis + max(lh, viewport * 0.13)))
             tgt = vw.layout_to_text((0, vis + viewport * 0.18))
 
             vw.run_command("mini_outline", args={ "current": curr, "target": tgt })
@@ -330,7 +331,8 @@ class MiniOutlineCommand(MOCmd):
 
         if update or not (rgns and tgtrgn.contains(rgns[0])):
 
+            completed = True
             if vw.scope_name(0).startswith("source"):
-                scan_lines(vw, Cache.views["symbol_point"][0], current)
+                completed = scan_lines(vw, Cache.views["symbol_point"][0], current)
 
-            self.do(current, Pkg.settings.get("mini_outline", "symbol"))
+            self.do(current, Pkg.settings.get("mini_outline", "symbol"), completed)

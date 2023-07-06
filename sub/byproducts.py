@@ -4,6 +4,7 @@ import sublime_plugin
 import itertools as itools
 import operator as opr
 import functools as ftools
+import bisect
 
 from .containers import Cache
 
@@ -122,7 +123,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
-    def do(self, current_point, mode):
+    def do(self, current_point, mode, completed):
 
         def navigate(href):
             nonlocal vw
@@ -157,10 +158,22 @@ class MOCmd(sublime_plugin.TextCommand):
 
         indicated = (f'<div class="indicate">{href}</div>' if sel else href 
                                                  for href, sel in zip(hrefs, selectors))
-        astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
-        indicator = '.indicate{border-left: 0.25rem solid var(--greenish);}'
 
-        con = (f'<body id="minioutline"><style>{astyle}{indicator}</style>'
+        idx = bisect.bisect_left(sym_pts, current_point)
+
+        indicated = itools.chain(itools.islice(indicated, idx), 
+                                 ['<div class="arrow"></div>'], 
+                                 indicated)
+
+        color = "var(--greenish)" if completed else "var(--redish)"
+        astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
+        indicator = f'.indicate{{border-left: 0.2rem solid {color}; margin-left: -0.15rem}}'
+
+        arrow = ('.arrow{margin: 0.1rem, 0rem; border-right: 0.6rem solid var(--yellowish);' 
+                                              'border-top: 0.2rem solid transparent;'
+                                              'border-bottom: 0.2rem solid transparent;')
+
+        con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}</style>'
                    f'<div style="margin: 0.3rem, 0.8rem">{"".join(indicated)}</div>'
                 '</body>')
 
