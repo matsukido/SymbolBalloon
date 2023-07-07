@@ -167,14 +167,16 @@ class MOCmd(sublime_plugin.TextCommand):
 
         color = "var(--greenish)" if completed else "var(--redish)"
         astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
-        indicator = f'.indicate{{border-left: 0.2rem solid {color}; margin-left: -0.15rem}}'
+        indicator = (f'.indicate{{margin: -0.12rem; padding-left: -0.1rem;'
+                                f'border-left: 0.22rem solid {color};}}')
 
-        arrow = ('.arrow{margin: 0.1rem, 0rem; border-right: 0.6rem solid var(--yellowish);' 
-                                              'border-top: 0.2rem solid transparent;'
-                                              'border-bottom: 0.2rem solid transparent;')
+        arrow = ('.arrow{height: 0; margin: -0.1rem -0.6rem; '
+                        'border-right: 0.4rem solid var(--yellowish);' 
+                        'border-top: 0.3rem solid transparent;'
+                        'border-bottom: 0.3rem solid transparent;}')
 
         con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}</style>'
-                   f'<div style="margin: 0.3rem, 0.8rem">{"".join(indicated)}</div>'
+                   f'<div style="margin: 0.3rem 0.8rem">{"".join(indicated)}</div>'
                 '</body>')
 
         vw.erase_regions("MiniOutline")
