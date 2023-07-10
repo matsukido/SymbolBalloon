@@ -29,10 +29,7 @@ class FTOCmd(sublime_plugin.TextCommand):
             ba_rgns = itools.starmap(sublime.Region, bababb)
             vw.fold(list(ba_rgns))
 
-            vw.show(a_pt + 1,
-                    show_surrounds= False,
-                    animate=        True,
-                    keep_to_left=   True)
+            vw.show_at_center(a_pt + 1)
 
         vw = self.view
         Cache.query_init(vw)
@@ -41,7 +38,7 @@ class FTOCmd(sublime_plugin.TextCommand):
             return
 
         sym_lvls = Cache.views["symbol_level"]
-        lvls = sorted(list(set(sym_lvls)), reverse=True)
+        lvls = sorted(set(sym_lvls), reverse=True)
         qpitems = [*map(str, lvls)]
         
         if len(qpitems) == 1:
@@ -54,7 +51,6 @@ class FTOCmd(sublime_plugin.TextCommand):
                 on_select=lambda idx: idx,
                 selected_index=0,
                 placeholder="Folding level")
-
 
 
 class GTLSCmd(sublime_plugin.TextCommand):
@@ -167,7 +163,7 @@ class MOCmd(sublime_plugin.TextCommand):
 
         color = "var(--greenish)" if completed else "var(--redish)"
         astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
-        indicator = (f'.indicate{{margin: -0.12rem; padding-left: -0.1rem;'
+        indicator = (f'.indicate{{margin: -0.1rem; padding-left: -0.12rem;'
                                 f'border-left: 0.22rem solid {color};}}')
 
         arrow = ('.arrow{height: 0; margin: -0.1rem -0.6rem; '
