@@ -4,6 +4,7 @@ import sublime_plugin
 import html
 import re
 import itertools as itools
+import functools as ftools
 import operator as opr
 import math
 
@@ -14,7 +15,7 @@ from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd
 def plugin_loaded():
     Pkg.init_settings()
 
-    
+
 class SymbolBalloonListner(sublime_plugin.ViewEventListener):
     is_panel = False
 
@@ -35,14 +36,21 @@ class SymbolBalloonListner(sublime_plugin.ViewEventListener):
 
     def on_hover(self, point, hover_zone):
         if (hover_zone == sublime.HOVER_GUTTER or 
-                        not Pkg.settings.get("mini_outline", False)):
+                        Pkg.settings.get("mini_outline", "none") == "none"):
             return
         vw = self.view
-        vpt = vw.visible_region().begin()
-        tgtrgn = sublime.Region(vpt, vw.text_point(vw.rowcol(vpt)[0] + 4, 0))
+        vrgn = vw.visible_region()
+        _, vis = vw.text_to_layout(vrgn.begin())
+        lh = vw.line_height()
 
-        if tgtrgn.contains(point):
-            vw.run_command("mini_outline", args={ "point": tgtrgn.end() })
+        _, viewport = vw.viewport_extent()
+        _, mouse = vw.text_to_layout(point)
+
+        if vis - lh < mouse < vis + viewport * 0.18:
+            curr = vw.layout_to_text((0, vis + max(lh, viewport * 0.13)))
+            tgt = vw.layout_to_text((0, vis + viewport * 0.18))
+
+            vw.run_command("mini_outline", args={ "current": curr, "target": tgt })
 
 
 def scan_manager(scanlines):
@@ -91,8 +99,6 @@ def scan_lines(view, line_tuples, target_indentlevel):
     ignrchr = Pkg.settings.get("ignored_characters", "")
     ignrscope = Pkg.settings.get("ignored_scope", "_")
     tabsize = int(view.settings().get('tab_size', 8))
-    if Cache.views["using_tab"]:
-        tabsize = 1
 
     tgtlvl = target_indentlevel
     pt = None
@@ -107,11 +113,13 @@ def scan_lines(view, line_tuples, target_indentlevel):
             idtwidth = idtlvl = 0
 
         else:
-            topchr = fullline.lstrip()[0:1]
-            idtwidth = fullline.index(topchr)
+            fline = fullline.expandtabs(tabsize)
+            topchr = fline.lstrip()[0:1]
+            idtwidth = fline.index(topchr)
             idtlvl = math.ceil(idtwidth / tabsize)
             if tgtlvl < idtlvl:
                 continue
+            idtwidth = fullline.index(topchr)
 
         if topchr in ignrchr or view.match_selector(pt + idtwidth, ignrscope):
             closed.false.setdefault(idtlvl, pt)
@@ -174,34 +182,31 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         is_param = ("meta.function.parameters | meta.class.parameters "
                     "| meta.class.inheritance | meta.method.parameters")
         is_def = "meta.function | meta.class | meta.section.latex"
-        tabsize = int(vw.settings().get('tab_size', 8))
         
+        tabsize = int(vw.settings().get('tab_size', 8))
+        symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
+        to_html = ftools.partial(vw.export_to_html, 
+                                 minihtml=True, enclosing_tags=False, 
+                                 font_size=False, font_family=False)
+        preds = [
+            lambda pt: vw.match_selector(pt, is_param) ^ vw.match_selector(pt, is_def),
+            lambda pt: vw.match_selector(pt, is_param)]
+
         for symbol in symbol_infos:
 
             symbolpt = symbol.region.a
             symbolpt_b = symbol.region.b
             prm_max = symbolpt_b + 1500
+            itrng = iter(range(symbolpt_b, prm_max))
 
-            prm_a = itools.dropwhile(lambda pnt:
-                        opr.xor(
-                            vw.match_selector(pnt, is_param),
-                            vw.match_selector(pnt, is_def)
-                        ), range(symbolpt_b, prm_max))
-            try:
-                prm_begin = next(prm_a)
-                prm_b = itools.dropwhile(lambda pnt:
-                                    vw.match_selector(pnt, is_param), prm_a)
-                prm_end = next(prm_b, prm_max)
-                param = vw.substr(sublime.Region(prm_begin, prm_end))
-                param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
-
-            except StopIteration:
-                param = ""
+            drops = map(itools.dropwhile, preds, [itrng] * 2)
+            param = vw.substr(sublime.Region(*map(next, drops, [prm_max] * 2)))
+            param = re.sub(r'^[ \t]+', ' ', param, flags=re.MULTILINE)
+            param = html.escape(param, quote=True).expandtabs(tabsize).replace(" ",  "&nbsp;")
 
             row = vw.rowcol(symbolpt)[0] + 1
             
             linergn = vw.line(symbolpt)
-            symbolline = vw.substr(linergn)
 
             if is_source:
                 symname = symbol.name
@@ -210,11 +215,14 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                 nmrgns = itools.compress(rgns, map(lambda scp: "entity.name" in scp, scps))
                 symname = "".join(map(vw.substr, nmrgns))
 
-            kwd, sym, prm = symbolline.partition(symname or "---")
+            if symcolor == "color_scheme":
+                kwd, sym, prm = to_html(linergn), "", ""
+            else:
+                kwd, sym, prm = vw.substr(linergn).partition(symname or "---")
 
-            kwd, sym, prm, param = map(lambda st:
-                html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
-                (kwd, sym, prm, param))
+                kwd, sym, prm, param = map(lambda st:
+                    html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
+                    (kwd, sym, prm, param))
             
             markup += (f'<a class="noline" href="{symbolpt}" title="{param}">'
                             f'<span class="symbolline">{kwd}</span>'
@@ -223,7 +231,6 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
                             f'<span class="row">&nbsp;..{row}</span>'
                         '</a><br>')
 
-        symcolor = Pkg.settings.get("symbol_color", "var(--foreground)")
         fontsize = Pkg.settings.get("font_size", 0.95)
         ballooncolor = "#dcf" if completed else "#d77"
 
@@ -312,21 +319,20 @@ class GotoTopLevelSymbolCommand(GTLSCmd):
 
 class MiniOutlineCommand(MOCmd):
 
-    def run(self, edit, point):
+    def run(self, edit, current, target):
 
         vw = self.view
         update = Cache.query_init(vw)
         if not Cache.views["symbol_point"]:
             return
         vpt = vw.full_line(vw.visible_region().begin()).end()
-        tgtrgn = sublime.Region(vpt, point)
+        tgtrgn = sublime.Region(vpt, target)
         rgns = vw.get_regions("MiniOutline")
 
         if update or not (rgns and tgtrgn.contains(rgns[0])):
-            vpt = vw.visible_region().begin()
-            curr_pt = vw.text_point(vw.rowcol(vpt)[0] + 3, 0)
 
+            completed = True
             if vw.scope_name(0).startswith("source"):
-                scan_lines(vw, Cache.views["symbol_point"][0], curr_pt)
-            
-            self.do(curr_pt)
+                completed = scan_lines(vw, Cache.views["symbol_point"][0], current)
+
+            self.do(current, Pkg.settings.get("mini_outline", "symbol"), completed)

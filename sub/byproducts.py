@@ -4,6 +4,7 @@ import sublime_plugin
 import itertools as itools
 import operator as opr
 import functools as ftools
+import bisect
 
 from .containers import Cache
 
@@ -12,25 +13,44 @@ class FTOCmd(sublime_plugin.TextCommand):
     # Fold to outline
     def run(self, edit):
 
+        def focus_level(target_level):
+            nonlocal vw, sym_pts, sym_lvls
+
+            vw.unfold(sublime.Region(0, vw.size()))
+            selectors = map(opr.le, sym_lvls, itools.repeat(int(target_level)))
+            selected_pts = itools.compress(sym_pts, selectors)
+
+            ab = map(opr.methodcaller("to_tuple"), map(vw.line, selected_pts))
+            flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
+            a_pt = next(flat, -1)
+            
+            size = Cache.views["size"]
+            bababb = itools.zip_longest(flat, flat, fillvalue=size)
+            ba_rgns = itools.starmap(sublime.Region, bababb)
+            vw.fold(list(ba_rgns))
+
+            vw.show_at_center(a_pt + 1)
+
         vw = self.view
         Cache.query_init(vw)
         sym_pts = Cache.views["symbol_point"]
         if not sym_pts:
             return
 
-        ab = map(opr.methodcaller("to_tuple"), map(vw.line, sym_pts))
-        flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
-        a_pt = next(flat, -1)
+        sym_lvls = Cache.views["symbol_level"]
+        lvls = sorted(set(sym_lvls), reverse=True)
+        qpitems = [*map(str, lvls)]
         
-        size = Cache.views["size"]
-        bababb = itools.zip_longest(flat, flat, fillvalue=size)
-        ba_rgns = itools.starmap(sublime.Region, bababb)
-        vw.fold(list(ba_rgns))
+        if len(qpitems) == 1:
+            focus_level(qpitems[0])
+            return
 
-        vw.show(a_pt + 1,
-                show_surrounds= False,
-                animate=        True,
-                keep_to_left=   True)
+        vw.window().show_quick_panel(
+                items=qpitems, 
+                on_highlight=lambda idx: focus_level(qpitems[idx]),
+                on_select=lambda idx: idx,
+                selected_index=0,
+                placeholder="Folding level")
 
 
 class GTLSCmd(sublime_plugin.TextCommand):
@@ -99,7 +119,7 @@ class GTLSCmd(sublime_plugin.TextCommand):
 
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
-    def do(self, current_point):
+    def do(self, current_point, mode, completed):
 
         def navigate(href):
             nonlocal vw
@@ -112,26 +132,47 @@ class MOCmd(sublime_plugin.TextCommand):
         vw = self.view
         sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
-                                 minihtml=True, enclosing_tags=False, font_size=False)
-        htmls = map(to_html, map(vw.line, sym_pts))
+                                 minihtml=True, enclosing_tags=False, 
+                                 font_size=False, font_family=False)
+        regions = map(vw.line, sym_pts)
+
+        if mode == "symbol":
+            regions = (sublime.Region(line.a, pt) if line.contains(pt) else line  
+                               for line, pt in zip(regions, Cache.views["symbol_end_point"]))
+
+        htmls = map(to_html, regions)
         hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
         visible_symbol, _ = Cache.sectional_view(current_point)
-        vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
         
         if not visible_symbol:
-            selector = itools.repeat(False)
+            selectors = itools.repeat(False)
         else:
+            vsrgns = map(opr.attrgetter("region"), visible_symbol.values())
             rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
-            selector = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
+            selectors = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 
         indicated = (f'<div class="indicate">{href}</div>' if sel else href 
-                                                 for href, sel in zip(hrefs, selector))
-        astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
-        indicator = '.indicate{border-left: 0.25rem solid var(--greenish);}'
+                                                 for href, sel in zip(hrefs, selectors))
 
-        con = (f'<body id="minioutline"><style>{astyle}{indicator}</style>'
-                   f'<div style="margin: 0.3rem, 0.8rem">{"".join(indicated)}</div>'
+        idx = bisect.bisect_left(sym_pts, current_point)
+
+        indicated = itools.chain(itools.islice(indicated, idx), 
+                                 ['<div class="arrow"></div>'], 
+                                 indicated)
+
+        color = "var(--greenish)" if completed else "var(--redish)"
+        astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
+        indicator = (f'.indicate{{margin: -0.1rem; padding-left: -0.12rem;'
+                                f'border-left: 0.22rem solid {color};}}')
+
+        arrow = ('.arrow{height: 0; margin: -0.1rem -0.6rem; '
+                        'border-right: 0.4rem solid var(--yellowish);' 
+                        'border-top: 0.3rem solid transparent;'
+                        'border-bottom: 0.3rem solid transparent;}')
+
+        con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}</style>'
+                   f'<div style="margin: 0.3rem 0.8rem">{"".join(indicated)}</div>'
                 '</body>')
 
         vw.erase_regions("MiniOutline")
