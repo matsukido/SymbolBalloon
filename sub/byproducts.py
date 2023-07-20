@@ -117,6 +117,27 @@ class GTLSCmd(sublime_plugin.TextCommand):
                 placeholder="Top level")
 
 
+def unfold_selector(current_index, symbol_levels):
+
+    symcnt = len(symbol_levels)
+    if symcnt < 40:
+        return itools.repeat(True)
+
+    toplvl = min(symbol_levels)
+    unfolds = map(opr.eq, symbol_levels, itools.repeat(toplvl))
+
+    uf = itools.chain(itools.repeat(False, current_index - 2), 
+                      [True] * 5, 
+                      itools.repeat(False))
+
+    if 30 < symbol_levels.count(toplvl):
+        unfolds = itools.chain(itools.islice(unfolds, 8), 
+                               itools.repeat(False, symcnt - 16), 
+                               itools.islice(unfolds, symcnt - 16, None))
+
+    return map(opr.or_, unfolds, uf)
+
+
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
     def do(self, current_point, mode, completed):
@@ -141,9 +162,11 @@ class MOCmd(sublime_plugin.TextCommand):
                                for line, pt in zip(regions, Cache.views["symbol_end_point"]))
 
         htmls = map(to_html, regions)
-        hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
+        hrefs = map('<a href="{}">{}</a>'.format, sym_pts, htmls)
 
         visible_symbol, _ = Cache.sectional_view(current_point)
+        idx = bisect.bisect_left(sym_pts, current_point)
+        uf_selectors = unfold_selector(idx, Cache.views["symbol_level"])
         
         if not visible_symbol:
             selectors = itools.repeat(False)
@@ -152,14 +175,16 @@ class MOCmd(sublime_plugin.TextCommand):
             rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
             selectors = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 
-        indicated = (f'<div class="indicate">{href}</div>' if sel else href 
-                                                 for href, sel in zip(hrefs, selectors))
-
-        idx = bisect.bisect_left(sym_pts, current_point)
+        indicated = (f'<div class="indicate">{href}</div>' if sel else 
+                                f'{href}<br>' if uf else False
+                                        for href, sel, uf in zip(hrefs, selectors, uf_selectors))
 
         indicated = itools.chain(itools.islice(indicated, idx), 
                                  ['<div class="arrow"></div>'], 
                                  indicated)
+
+        grp = itools.groupby(indicated)
+        indicated = (k if k is not False else '<div class="foldline"></div>'  for k, v in grp)
 
         color = "var(--greenish)" if completed else "var(--redish)"
         astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
@@ -171,7 +196,10 @@ class MOCmd(sublime_plugin.TextCommand):
                         'border-top: 0.3rem solid transparent;'
                         'border-bottom: 0.3rem solid transparent;}')
 
-        con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}</style>'
+        foldline = ('.foldline{height: 0px; width: 3rem; margin: 0.25rem 3rem; '
+                              'border-bottom: 1.2px solid var(--redish);}') 
+
+        con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}{foldline}</style>'
                    f'<div style="margin: 0.3rem 0.8rem">{"".join(indicated)}</div>'
                 '</body>')
 
