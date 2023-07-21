@@ -120,22 +120,24 @@ class GTLSCmd(sublime_plugin.TextCommand):
 def unfold_selector(current_index, symbol_levels):
 
     symcnt = len(symbol_levels)
-    if symcnt < 40:
+    if symcnt < 35:
         return itools.repeat(True)
 
     toplvl = min(symbol_levels)
     unfolds = map(opr.eq, symbol_levels, itools.repeat(toplvl))
+    topcnt = symbol_levels.count(toplvl)
 
-    uf = itools.chain(itools.repeat(False, current_index - 2), 
-                      [True] * 5, 
-                      itools.repeat(False))
+    ch = itools.chain(itools.repeat(True, 8), 
+                      itools.repeat(False, topcnt - 16), 
+                      itools.repeat(True, 8))
 
-    if 30 < symbol_levels.count(toplvl):
-        unfolds = itools.chain(itools.islice(unfolds, 8), 
-                               itools.repeat(False, symcnt - 16), 
-                               itools.islice(unfolds, symcnt - 16, None))
+    unfolds = ((istop and next(ch))  for istop in unfolds)
 
-    return map(opr.or_, unfolds, uf)
+    surrounds = itools.chain(itools.repeat(False, current_index - 8), 
+                             itools.repeat(True, 14), 
+                             itools.repeat(False, symcnt))
+
+    return map(opr.or_, unfolds, surrounds)
 
 
 class MOCmd(sublime_plugin.TextCommand):
