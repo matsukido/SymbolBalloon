@@ -117,7 +117,6 @@ class GTLSCmd(sublime_plugin.TextCommand):
                 placeholder="Top level")
 
 
-
 class MOCmd(sublime_plugin.TextCommand):
     # Mini outline
     def do(self, current_point, mode, completed):
@@ -139,10 +138,13 @@ class MOCmd(sublime_plugin.TextCommand):
             toplvl = min(symbol_levels)
             unfolds = map(opr.eq, symbol_levels, itools.repeat(toplvl))
             topcnt = symbol_levels.count(toplvl)
+            foldcnt = (topcnt - 10) // 2
 
-            ch = itools.chain(itools.repeat(True, 8), 
-                              itools.repeat(False, topcnt - 16), 
-                              itools.repeat(True, 8))
+            ch = itools.chain(itools.repeat(True, 5), 
+                              itools.repeat((), foldcnt),
+                              [True], 
+                              itools.repeat((), foldcnt), 
+                              itools.repeat(True, 5 + 2))
 
             unfolds = ((istop and next(ch))  for istop in unfolds)
 
@@ -150,8 +152,7 @@ class MOCmd(sublime_plugin.TextCommand):
                                      itools.repeat(True, 14), 
                                      itools.repeat(False, symcnt))
 
-            return map(opr.or_, unfolds, surrounds)
-
+            return ((srd or uf)  for srd, uf in zip(surrounds, unfolds))
 
         vw = self.view
         sym_pts = Cache.views["symbol_point"]
@@ -185,8 +186,12 @@ class MOCmd(sublime_plugin.TextCommand):
                                ['<div class="arrow"></div>'], 
                                indicated)
 
-        grp = itools.groupby(arrowed)
-        folded = (k if k is not False else '<div class="foldline"></div>'  for k, _ in grp)
+        dct = {True: ['<div class="topfold"></div>'],
+               False: ['<div class="foldline"></div>']}
+
+        grp = itools.groupby(arrowed, key=bool)
+        folded = itools.chain.from_iterable(itr if bln else dct[() in itr] 
+                                                            for bln, itr in grp)
 
         color = "var(--greenish)" if completed else "var(--redish)"
         astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
@@ -201,8 +206,14 @@ class MOCmd(sublime_plugin.TextCommand):
         foldline = ('.foldline{height: 0px; width: 3rem; margin: 0.25rem 0rem 0.25rem 3rem;'
                               'border-bottom: 1.2px solid var(--redish);}') 
 
-        con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}{foldline}</style>'
-                   f'<div style="margin: 0.3rem 0.8rem">{"".join(folded)}</div>'
+        topfold = ('.topfold{height: 0; margin: -0.1rem -0.1rem; '
+                            'border-left: 0.3rem solid var(--redish);' 
+                            'border-top: 0.25rem solid transparent;'
+                            'border-bottom: 0.25rem solid transparent;}')
+
+        con = ('<body id="minioutline">'
+                    f'<style>{astyle}{indicator}{arrow}{foldline}{topfold}</style>'
+                    f'<div style="margin: 0.3rem 0.8rem">{"".join(folded)}</div>'
                 '</body>')
 
         vw.erase_regions("MiniOutline")
