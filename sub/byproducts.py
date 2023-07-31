@@ -129,6 +129,31 @@ class MOCmd(sublime_plugin.TextCommand):
                     keep_to_left=True)
             vw.erase_regions("MiniOutline")
 
+        def unfold_selector(current_index, symbol_levels):
+
+            symcnt = len(symbol_levels)
+            if symcnt < 35:
+                return itools.repeat(True)
+
+            toplvl = min(symbol_levels)
+            unfolds = map(opr.eq, symbol_levels, itools.repeat(toplvl))
+            topcnt = symbol_levels.count(toplvl)
+            foldcnt = (topcnt - 10) // 2
+
+            ch = itools.chain(itools.repeat(True, 5), 
+                              itools.repeat((), foldcnt),
+                              [True], 
+                              itools.repeat((), foldcnt), 
+                              itools.repeat(True, 5 + 2))
+
+            unfolds = ((istop and next(ch))  for istop in unfolds)
+
+            surrounds = itools.chain(itools.repeat(False, current_index - 8), 
+                                     itools.repeat(True, 14), 
+                                     itools.repeat(False, symcnt))
+
+            return ((srd or uf)  for srd, uf in zip(surrounds, unfolds))
+
         vw = self.view
         sym_pts = Cache.views["symbol_point"]
         to_html = ftools.partial(vw.export_to_html, 
@@ -144,6 +169,8 @@ class MOCmd(sublime_plugin.TextCommand):
         hrefs = map('<a href="{}">{}</a><br>'.format, sym_pts, htmls)
 
         visible_symbol, _ = Cache.sectional_view(current_point)
+        idx = bisect.bisect_left(sym_pts, current_point)
+        uf_selectors = unfold_selector(idx, Cache.views["symbol_level"])
         
         if not visible_symbol:
             selectors = itools.repeat(False)
@@ -152,14 +179,19 @@ class MOCmd(sublime_plugin.TextCommand):
             rotated = itools.chain(vsrgns, (rgn := next(vsrgns), ))   # repeat False
             selectors = ((rgn.contains(pt) and (rgn := next(rotated)))  for pt in sym_pts)
 
-        indicated = (f'<div class="indicate">{href}</div>' if sel else href 
-                                                 for href, sel in zip(hrefs, selectors))
+        indicated = (f'<div class="indicate">{href}</div>' if sel else (uf and href)
+                                for href, sel, uf in zip(hrefs, selectors, uf_selectors))
 
-        idx = bisect.bisect_left(sym_pts, current_point)
+        arrowed = itools.chain(itools.islice(indicated, idx), 
+                               ['<div class="arrow"></div>'], 
+                               indicated)
 
-        indicated = itools.chain(itools.islice(indicated, idx), 
-                                 ['<div class="arrow"></div>'], 
-                                 indicated)
+        dct = {True: ['<div class="topfold"></div>'],
+               False: ['<div class="foldline"></div>']}
+
+        grp = itools.groupby(arrowed, key=bool)
+        folded = itools.chain.from_iterable(itr if bln else dct[() in itr] 
+                                                            for bln, itr in grp)
 
         color = "var(--greenish)" if completed else "var(--redish)"
         astyle = 'a{text-decoration: none; font-size: 0.9rem;}'
@@ -171,8 +203,17 @@ class MOCmd(sublime_plugin.TextCommand):
                         'border-top: 0.3rem solid transparent;'
                         'border-bottom: 0.3rem solid transparent;}')
 
-        con = (f'<body id="minioutline"><style>{astyle}{indicator}{arrow}</style>'
-                   f'<div style="margin: 0.3rem 0.8rem">{"".join(indicated)}</div>'
+        foldline = ('.foldline{height: 0px; width: 3rem; margin: 0.25rem 0rem 0.25rem 3rem;'
+                              'border-bottom: 1.2px solid var(--redish);}') 
+
+        topfold = ('.topfold{height: 0; margin: -0.1rem -0.1rem; '
+                            'border-left: 0.3rem solid var(--redish);' 
+                            'border-top: 0.25rem solid transparent;'
+                            'border-bottom: 0.25rem solid transparent;}')
+
+        con = ('<body id="minioutline">'
+                    f'<style>{astyle}{indicator}{arrow}{foldline}{topfold}</style>'
+                    f'<div style="margin: 0.3rem 0.8rem">{"".join(folded)}</div>'
                 '</body>')
 
         vw.erase_regions("MiniOutline")
