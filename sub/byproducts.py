@@ -16,7 +16,9 @@ class FTOCmd(sublime_plugin.TextCommand):
         def focus_level(target_level):
             nonlocal vw, sym_pts, sym_lvls
 
-            vw.unfold(sublime.Region(0, vw.size()))
+            size = Cache.views["size"]
+            vw.unfold(sublime.Region(0, size))
+
             selectors = map(opr.le, sym_lvls, itools.repeat(int(target_level)))
             selected_pts = itools.compress(sym_pts, selectors)
 
@@ -24,12 +26,18 @@ class FTOCmd(sublime_plugin.TextCommand):
             flat = itools.chain.from_iterable((a - 1, b)  for a, b in ab)
             a_pt = next(flat, -1)
             
-            size = Cache.views["size"]
             bababb = itools.zip_longest(flat, flat, fillvalue=size)
             ba_rgns = itools.starmap(sublime.Region, bababb)
             vw.fold(list(ba_rgns))
 
             vw.show_at_center(a_pt + 1)
+
+        def commit_level():
+            nonlocal vw
+            vw.show(vw.sel()[0].begin(),
+                    show_surrounds= True,
+                    animate=        True,
+                    keep_to_left=   True)
 
         vw = self.view
         Cache.query_init(vw)
@@ -48,7 +56,7 @@ class FTOCmd(sublime_plugin.TextCommand):
         vw.window().show_quick_panel(
                 items=qpitems, 
                 on_highlight=lambda idx: focus_level(qpitems[idx]),
-                on_select=lambda idx: idx,
+                on_select=lambda idx: commit_level(),
                 selected_index=0,
                 placeholder="Folding level")
 
