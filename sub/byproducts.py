@@ -51,6 +51,7 @@ class FTOCmd(sublime_plugin.TextCommand):
         
         if len(qpitems) == 1:
             focus_level(qpitems[0])
+            vw.show_at_center(vw.sel()[0].begin())
             return
 
         vw.window().show_quick_panel(
@@ -230,3 +231,68 @@ class MOCmd(sublime_plugin.TextCommand):
                        annotations=[con],
                        annotation_color="#36c",
                        on_navigate=navigate)
+
+
+class GSWFCmd(sublime_plugin.TextCommand):
+    # Goto symbol with filter
+    def run(self, edit):
+
+        def focus_symbol(symrgn, word):
+            nonlocal vw
+            vw.add_regions(key="GotoSymbolWithFilter", 
+                           regions=[symrgn], 
+                           flags=sublime.DRAW_NO_FILL,
+                           scope="invalid",
+                           icon="circle",
+                           annotations=[word],
+                           annotation_color="#95a")
+
+            vw.show_at_center(symrgn)
+            vw.show(symrgn.a,
+                    show_surrounds= True,
+                    animate=        True,
+                    keep_to_left=   True)
+
+        def commit_symbol(symrgns, idx):
+            nonlocal vw
+            vw.erase_regions("GotoSymbolWithFilter")
+            if idx < 0:
+                vw.show_at_center(vw.sel()[0])  # cancel
+            else:
+                vw.sel().clear()
+                vw.sel().add(symrgns[idx])
+
+        vw = self.view
+        Cache.query_init(vw)
+        symlvls = Cache.views["symbol_level"]
+        if not symlvls:
+            vw.window().run_command("show_overlay", 
+                                    args={"overlay": "goto", "text": "@"})
+            return
+
+        zipped = zip(symlvls,
+                     Cache.views["symbol_point"],
+                     Cache.views["symbol_end_point"],
+                     Cache.views["symbol_name"],
+                     itools.zip_longest(*Cache.views["symbol_kind"], fillvalue=""))
+
+        symrgns, qpitems = [], []
+        index = itools.count(-1)
+        tgtpt = vw.sel()[0].begin()
+
+        for lvl, a_pt, b_pt, name, kind in zipped:
+
+            symrgns.append(sublime.Region(a_pt, b_pt))
+            trg = ("  " * lvl + name).ljust(35) + "   " + str(lvl) + ";" + kind[1]
+            qpitems.append(sublime.QuickPanelItem(trigger=trg, 
+                                                  kind=kind,
+                                                  annotation=str(vw.rowcol(a_pt)[0] + 1)))
+            (a_pt <= tgtpt) and next(index)
+
+        vw.window().show_quick_panel(
+                items=qpitems, 
+                on_highlight=lambda idx: focus_symbol(symrgns[idx], qpitems[idx].trigger[:-3]),
+                on_select=lambda idx: commit_symbol(symrgns, idx),
+                selected_index=next(index),
+                placeholder="",
+                flags=sublime.MONOSPACE_FONT)

@@ -9,7 +9,7 @@ import operator as opr
 import math
 
 from .sub.containers import Const, Pkg, ChainMapEx, Closed, Cache
-from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd
+from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd, GSWFCmd
 
 
 def plugin_loaded():
@@ -314,6 +314,10 @@ class FoldToOutlineCommand(FTOCmd):
 
 
 class GotoTopLevelSymbolCommand(GTLSCmd):
+    pass
+
+
+class GotoSymbolWithFilterCommand(GSWFCmd):
     pass
 
 
