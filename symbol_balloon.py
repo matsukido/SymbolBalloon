@@ -220,9 +220,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             else:
                 kwd, sym, prm = vw.substr(linergn).partition(symname or "---")
 
-                kwd, sym, prm, param = map(lambda st:
-                    html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
-                    (kwd, sym, prm, param))
+                kwd, sym, prm = map(lambda st:
+                        html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
+                        (kwd, sym, prm))
             
             markup += (f'<a class="noline" href="{symbolpt}" title="{param}">'
                             f'<span class="symbolline">{kwd}</span>'
