@@ -38,6 +38,7 @@ Displays the symbol the row at the top of the window belongs to.
 	// optional
 	// { "keys": ["ctrl+j", "ctrl+f"], "command": "fold_to_outline" },
 	// { "keys": ["ctrl+j", "ctrl+r"], "command": "goto_top_level_symbol" },
+	// { "keys": ["ctrl+k", "ctrl+r"], "command": "goto_symbol_with_filter" },
 ]
 ```
 
