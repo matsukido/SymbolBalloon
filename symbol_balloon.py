@@ -9,7 +9,7 @@ import operator as opr
 import math
 
 from .sub.containers import Const, Pkg, ChainMapEx, Closed, Cache
-from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd
+from .sub.byproducts import FTOCmd, GTLSCmd, MOCmd, GSWFCmd
 
 
 def plugin_loaded():
@@ -220,9 +220,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             else:
                 kwd, sym, prm = vw.substr(linergn).partition(symname or "---")
 
-                kwd, sym, prm, param = map(lambda st:
-                    html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
-                    (kwd, sym, prm, param))
+                kwd, sym, prm = map(lambda st:
+                        html.escape(st).expandtabs(tabsize).replace(" ",  "&nbsp;"),
+                        (kwd, sym, prm))
             
             markup += (f'<a class="noline" href="{symbolpt}" title="{param}">'
                             f'<span class="symbolline">{kwd}</span>'
@@ -314,6 +314,10 @@ class FoldToOutlineCommand(FTOCmd):
 
 
 class GotoTopLevelSymbolCommand(GTLSCmd):
+    pass
+
+
+class GotoSymbolWithFilterCommand(GSWFCmd):
     pass
 
 
