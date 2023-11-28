@@ -106,6 +106,8 @@ class Cache:
             syntax = view.syntax().name
             is_source = view.scope_name(0).startswith("source")
 
+            ignr_symscope = Pkg.settings.get("ignored_symbols", {}).get(syntax, "")
+
             level = view.indentation_level if is_source else heading_level
             sr = view.symbol_regions()
             
@@ -117,6 +119,9 @@ class Cache:
                         "symbol_point": (), "symbol_level": ()}
 
             tpls = map(opr.attrgetter("name", "region", "kind"), sr)
+            if ignr_symscope:                    
+                tpls = (tpl  for tpl in tpls  
+                                if not view.match_selector(tpl[1].begin(), ignr_symscope))
 
             names, regions, kinds = zip(*tpls)
             a_pts, b_pts = zip(*regions)
