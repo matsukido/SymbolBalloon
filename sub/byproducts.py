@@ -147,7 +147,7 @@ class MOCmd(sublime_plugin.TextCommand):
             toplvl = min(symbol_levels)
             unfolds = map(opr.eq, symbol_levels, itools.repeat(toplvl))
             topcnt = symbol_levels.count(toplvl)
-            foldcnt = (topcnt - 10) // 2
+            foldcnt = (topcnt - (5 + 1 + 5)) // 2
 
             ch = itools.chain(itools.repeat(True, 5), 
                               itools.repeat((), foldcnt),

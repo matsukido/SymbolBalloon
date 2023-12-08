@@ -5,6 +5,10 @@
 	"ignored_characters": "{<()\"'/*#",
 	"ignored_scope": "comment",
 
+	// Symbols that do not belong to a hierarchical structure
+	// ex.  {"Markdown": "meta.link.reference.def"},
+	"ignored_symbols": {}, 
+
 	// https://www.sublimetext.com/docs/minihtml.html#colors
 	// Or "color_scheme"
 	"symbol_color": "var(--foreground)",
