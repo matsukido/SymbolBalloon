@@ -35,13 +35,6 @@ class ChainMapEx(collections.ChainMap):
     def limit_filter(self, limit):
         return ChainMapEx({k: v  for k, v in self.items() if v < limit})
 
-    def fill(self, stop):
-        # {3: 44, 1: 77}.fill(6) --> {2: -1, 3: 44, 4: -1, 5: -1, 1: 77}
-        dct = {i: -1  for i in range(min(self, default=99) + 1, stop)}
-        cm = ChainMapEx(self)
-        cm.appendflat(dct)
-        return cm
-
     def move_to_child(self, pred, init_factory):
         dq = collections.deque(self.maps[:50], maxlen=50)
         # or None
@@ -163,35 +156,38 @@ class Cache:
             sr = sublime.SymbolRegion(name, sublime.Region(a_pt, b_pt), syntax, typ, kind)
             return sr
 
-        idx = bisect.bisect_left(cls.views["symbol_point"], visible_point) - 1
-        if idx < 0:
+
+        curr_idx = bisect.bisect_left(cls.views["symbol_point"], visible_point) - 1
+        if curr_idx < 0:
             return ({}, None)
 
-        reverse = slice(idx, None, -1)
+        reverse = slice(curr_idx, None, -1)
         idtlvls = cls.views["symbol_level"][reverse]
         toplvl = min(idtlvls)
-        stopper = range(idtlvls.index(toplvl) + 1)
 
-        sym_infos = zip(cls.views["symbol_name"][reverse],
-                        cls.views["symbol_point"][reverse],
-                        cls.views["symbol_end_point"][reverse])
         closes = cls.views["closed"][reverse]
         if not closes:
             return ({}, None)
 
-        sym_dcts = ({idt: info}  for idt, info, _ in zip(idtlvls, sym_infos, stopper))
-
         section, ignoredpt = closes[0].cut(visible_point)
         closes[0] = section
-        shutters = (cl.true.fill(15)  for cl in closes)
 
-        hiding = itools.chain.from_iterable(zip(shutters, sym_dcts))
+        cl_lvls = (min(cl.true.keys())  for cl in closes)
+        ac_sym = itools.accumulate(idtlvls, func=min)
+        ac_cls = itools.accumulate(cl_lvls, func=min)
 
-        visible_idtlvl = dict(ChainMapEx(*hiding))
-        visible_symbol = {idt: to_symbol_region(info)
-                            for idt, info in visible_idtlvl.items()
-                                        if not isinstance(info, int)}
-        idtlvls = sorted(visible_symbol)
-        visible_symbol = {idt: visible_symbol[idt]  for idt in idtlvls}
-        
+        zp = zip(ac_sym, ac_cls, range(curr_idx, -1, -1))
+        grp = itools.groupby(zp, key=opr.itemgetter(0))
+
+        tpls = (next(itr)  for _lvl, itr in grp)
+        indices = [idx  for symlvl, closelvl, idx in tpls  if symlvl < closelvl]
+
+        visible_symbol = {}
+        for idx in reversed(indices):
+            symrgn = to_symbol_region((cls.views["symbol_name"][idx],
+                                       cls.views["symbol_point"][idx], 
+                                       cls.views["symbol_end_point"][idx]))
+
+            visible_symbol.update({cls.views["symbol_level"][idx]: symrgn})
+      
         return (visible_symbol, ignoredpt)
