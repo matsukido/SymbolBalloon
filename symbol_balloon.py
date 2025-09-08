@@ -73,7 +73,7 @@ def scan_manager(scanlines):
 
             if sympt < end_point < scanpt:
                 continue
-            delta_rgn = view.full_line(sublime.Region(scanpt, min(nextsym, end_point)))
+            delta_rgn = view.full_line(sublime.Region(scanpt, nextsym))
             fulllines = view.substr(delta_rgn).splitlines(True)
 
             linestart_pts = itools.accumulate(map(len, fulllines), initial=delta_rgn.a)
