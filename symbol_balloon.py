@@ -69,11 +69,11 @@ def scan_manager(scanlines):
                      Cache.views["symbol_level"][index:],
                      itools.count(start=index))
 
-        for scanpt, nextsym, sympt, symlvl, idx in zipped:
+        for scanpt, nextsym, sympt, symlvl, idx in filter(lambda tpl: tpl[0] > 0, zipped):
 
             if sympt < end_point < scanpt:
                 continue
-            delta_rgn = view.full_line(sublime.Region(scanpt, min(nextsym, end_point)))
+            delta_rgn = view.full_line(sublime.Region(scanpt, nextsym))
             fulllines = view.substr(delta_rgn).splitlines(True)
 
             linestart_pts = itools.accumulate(map(len, fulllines), initial=delta_rgn.a)
@@ -85,7 +85,9 @@ def scan_manager(scanlines):
             new_scannedpt, closed = scanlines(view, line_tpls, symlvl)
 
             if new_scannedpt is not None:
-                Cache.views["scanned_point"][idx] = new_scannedpt
+
+                pt = -1 if next(stopper, False) else new_scannedpt
+                Cache.views["scanned_point"][idx] = pt
                 Cache.views["closed"][idx].appendflat(closed)
 
         return next(stopper, False)
@@ -148,6 +150,7 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
             nonlocal vw
             vw.erase_regions(Const.KEY_ID)
 
+
         vw = self.view
         Cache.query_init(vw)
         Pkg.init_settings()
@@ -164,7 +167,9 @@ class RaiseSymbolBalloonCommand(sublime_plugin.TextCommand):
         top_level_pt = nearly_symbol[min(nearly_symbol)]
         is_source = vw.scope_name(0).startswith("source")
 
+
         if is_source:
+
             completed = scan_lines(vw, top_level_pt, vpoint + 1)
             visible_symbol, ignoredpt = Cache.sectional_view(vpoint + 1)
 
