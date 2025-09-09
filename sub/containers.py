@@ -163,7 +163,6 @@ class Cache:
 
         reverse = slice(curr_idx, None, -1)
         idtlvls = cls.views["symbol_level"][reverse]
-        toplvl = min(idtlvls)
 
         closes = cls.views["closed"][reverse]
         if not closes:
